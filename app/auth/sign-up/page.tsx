@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
+import { useRouter } from "next/navigation";
 
 export default function SignUp() {
   const [email, setEmail] = useState("");
@@ -10,8 +11,15 @@ export default function SignUp() {
   const [confirm, setConfirm] = useState("");
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
+  const [isClient, setIsClient] = useState(false);
 
   const usernamePattern = /^[a-zA-Z0-9_]{3,20}$/;
+  const router = useRouter();
+
+  // Ensure useRouter is only used on the client-side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,28 +40,58 @@ export default function SignUp() {
 
     setError("");
 
+    // Check if username already exists
+    const { data: existing, error: checkError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("username", username)
+      .maybeSingle();
+
+    if (checkError) {
+      setError("Error checking username. Please try again.");
+      return;
+    }
+
+    if (existing) {
+      setError("Username is already taken.");
+      return;
+    }
+
     // Create user with Supabase Auth
-    const { user, error: authError } = await supabase.auth.signUp({
+    const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
     });
 
     if (authError) {
       setError(authError.message);
-    } else {
-      // Insert username into the user table
-      await supabase.from("profiles").upsert({
-        user_id: user?.id,
-        username,
-      });
+      return;
+    }
 
-      console.log("User signed up:", user);
+    const user = data.user;
+
+    // Insert username into the user table
+    const { error: dbError } = await supabase.from("profiles").upsert({
+      user_id: user?.id,
+      username,
+    });
+
+    if (dbError) {
+      setError("Error creating user profile. Please try again.");
+      return;
+    }
+
+    console.log("User signed up:", user);
+
+    // Only navigate client-side
+    if (isClient) {
+      router.push("/sign-in");
     }
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-neutral-900 backdrop-blur p-8 rounded-2xl shadow-lg">
+    <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-zinc-900 backdrop-blur p-8 rounded-2xl shadow-lg">
         <h1 className="text-2xl font-semibold mb-6 text-center">Sign Up</h1>
         <form className="space-y-4" onSubmit={handleSubmit}>
           {error && <p className="text-red-500 text-center">{error}</p>}

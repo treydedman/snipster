@@ -1,13 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
+import { useRouter } from "next/navigation";
 
 export default function SignIn() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isClient, setIsClient] = useState(false);
+
+  const router = useRouter();
+
+  // Ensure useRouter is only used on the client-side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +32,7 @@ export default function SignIn() {
     // Check if the identifier is a username or email
     let email = identifier;
     if (!email.includes("@")) {
-      // It’s a username, fetch associated email
+      // If a username, fetch associated email
       const { data: userData, error: userError } = await supabase
         .from("profiles")
         .select("email")
@@ -38,7 +47,7 @@ export default function SignIn() {
     }
 
     // Sign in with Supabase
-    const { user, error: authError } = await supabase.auth.signInWithPassword({
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -46,7 +55,12 @@ export default function SignIn() {
     if (authError) {
       setError(authError.message);
     } else {
-      console.log("User signed in:", user);
+      console.log("User signed in:", data.user);
+
+      // Only navigate client-side
+      if (isClient) {
+        router.push("/dashboard");
+      }
     }
   };
 
@@ -64,8 +78,8 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-neutral-900 backdrop-blur p-8 rounded-2xl shadow-lg">
+    <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-zinc-900 backdrop-blur p-8 rounded-2xl shadow-lg">
         <h1 className="text-2xl font-semibold mb-6 text-center">Sign In</h1>
         <form className="space-y-4" onSubmit={handleSubmit}>
           {error && <p className="text-red-500 text-center">{error}</p>}
