@@ -85,6 +85,7 @@ export default function SignIn() {
           {error && <p className="text-red-500 text-center">{error}</p>}
 
           <button
+            type="button"
             onClick={handleGitHubSignIn}
             className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 mb-6 rounded font-semibold"
           >
