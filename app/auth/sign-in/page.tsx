@@ -29,7 +29,7 @@ export default function SignIn() {
     if (!identifier || !password) {
       setError("Both fields are required.");
       setPulse(true);
-      setTimeout(() => setPulse(false), 1600); // Reset after two pulses (1.6s)
+      setTimeout(() => setPulse(false), 1600);
       return;
     }
 
@@ -67,7 +67,6 @@ export default function SignIn() {
     } else {
       console.log("User signed in:", data.user);
 
-      // Only navigate client-side
       if (isClient) {
         router.push("/dashboard");
       }

@@ -19,7 +19,6 @@ export default function SignUp() {
   const usernamePattern = /^[a-zA-Z0-9_]{3,20}$/;
   const router = useRouter();
 
-  // Ensure useRouter is only used on the client-side
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -83,7 +82,7 @@ export default function SignUp() {
 
     const user = data.user;
 
-    // Insert username into the profiles table
+    // Insert username into the user table
     const { error: dbError } = await supabase.from("profiles").upsert({
       user_id: user?.id,
       username,
@@ -98,7 +97,6 @@ export default function SignUp() {
 
     console.log("User signed up:", user);
 
-    // Only navigate client-side
     if (isClient) {
       router.push("/sign-in");
     }
