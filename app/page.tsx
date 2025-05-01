@@ -11,7 +11,7 @@ export default function Landing() {
       <section className="py-20 md:py-32 flex items-center justify-center bg-gradient-to-b from-background to-card/50">
         <div className="max-w-4xl mx-auto text-center px-4 flex flex-col items-center">
           <img
-            src="/snipster.png"
+            src="/snipster-logo.png"
             alt="Snipster Logo"
             className="h-12 w-[169px] md:h-16 md:w-[226px] mb-6 mx-auto shadow-lg"
           />
