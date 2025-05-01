@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export default function SignUp() {
   const [email, setEmail] = useState("");
@@ -12,6 +14,7 @@ export default function SignUp() {
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
   const [isClient, setIsClient] = useState(false);
+  const [pulse, setPulse] = useState(false);
 
   const usernamePattern = /^[a-zA-Z0-9_]{3,20}$/;
   const router = useRouter();
@@ -29,12 +32,16 @@ export default function SignUp() {
       setError(
         "Username must be between 3 and 20 characters and can only contain letters, numbers, and underscores."
       );
+      setPulse(true);
+      setTimeout(() => setPulse(false), 1600);
       return;
     }
 
     // Validate password match
     if (password !== confirm) {
       setError("Passwords do not match.");
+      setPulse(true);
+      setTimeout(() => setPulse(false), 1600);
       return;
     }
 
@@ -49,11 +56,15 @@ export default function SignUp() {
 
     if (checkError) {
       setError("Error checking username. Please try again.");
+      setPulse(true);
+      setTimeout(() => setPulse(false), 1600);
       return;
     }
 
     if (existing) {
       setError("Username is already taken.");
+      setPulse(true);
+      setTimeout(() => setPulse(false), 1600);
       return;
     }
 
@@ -65,12 +76,14 @@ export default function SignUp() {
 
     if (authError) {
       setError(authError.message);
+      setPulse(true);
+      setTimeout(() => setPulse(false), 1600);
       return;
     }
 
     const user = data.user;
 
-    // Insert username into the user table
+    // Insert username into the profiles table
     const { error: dbError } = await supabase.from("profiles").upsert({
       user_id: user?.id,
       username,
@@ -78,6 +91,8 @@ export default function SignUp() {
 
     if (dbError) {
       setError("Error creating user profile. Please try again.");
+      setPulse(true);
+      setTimeout(() => setPulse(false), 1600);
       return;
     }
 
@@ -90,51 +105,63 @@ export default function SignUp() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-zinc-900 backdrop-blur p-8 rounded-2xl shadow-lg">
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 dark">
+      <div className="w-full max-w-md bg-card backdrop-blur p-8 rounded-2xl shadow-lg">
         <h1 className="text-2xl font-semibold mb-6 text-center">Sign Up</h1>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          {error && <p className="text-red-500 text-center">{error}</p>}
+          {error && (
+            <p className="text-destructive text-center animate-slide-in">
+              {error}
+            </p>
+          )}
 
-          <input
-            className="w-full p-3 bg-black/30 rounded border border-neutral-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          <Input
+            className={`w-full bg-input border-border focus:ring-indigo-500 focus:shadow-glow transition-all duration-200 ${
+              pulse ? "animate-pulse-border" : ""
+            }`}
             type="text"
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
-          <input
-            className="w-full p-3 bg-black/30 rounded border border-neutral-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          <Input
+            className={`w-full bg-input border-border focus:ring-indigo-500 focus:shadow-glow transition-all duration-200 ${
+              pulse ? "animate-pulse-border" : ""
+            }`}
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <input
-            className="w-full p-3 bg-black/30 rounded border border-neutral-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          <Input
+            className={`w-full bg-input border-border focus:ring-indigo-500 focus:shadow-glow transition-all duration-200 ${
+              pulse ? "animate-pulse-border" : ""
+            }`}
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <input
-            className="w-full p-3 bg-black/30 rounded border border-neutral-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          <Input
+            className={`w-full bg-input border-border focus:ring-indigo-500 focus:shadow-glow transition-all duration-200 ${
+              pulse ? "animate-pulse-border" : ""
+            }`}
             type="password"
             placeholder="Confirm Password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
           />
-          <button
+          <Button
             type="submit"
-            className="w-full bg-indigo-600 hover:bg-indigo-500 transition text-white py-3 rounded font-semibold"
+            className="w-full bg-indigo-600 hover:bg-indigo-500 transition text-foreground"
           >
             Create Account
-          </button>
+          </Button>
         </form>
         <p className="text-center text-sm mt-4">
           Already have an account?{" "}
           <Link
-            href="/sign-in"
+            href="/auth/sign-in"
             className="text-indigo-400 hover:underline hover:font-bold"
           >
             Sign in

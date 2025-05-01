@@ -4,12 +4,16 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { FaGithub } from "react-icons/fa";
 
 export default function SignIn() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isClient, setIsClient] = useState(false);
+  const [pulse, setPulse] = useState(false);
 
   const router = useRouter();
 
@@ -24,6 +28,8 @@ export default function SignIn() {
     // Validate if email or username is provided
     if (!identifier || !password) {
       setError("Both fields are required.");
+      setPulse(true);
+      setTimeout(() => setPulse(false), 1600); // Reset after two pulses (1.6s)
       return;
     }
 
@@ -41,6 +47,8 @@ export default function SignIn() {
 
       if (userError || !userData) {
         setError("Username not found.");
+        setPulse(true);
+        setTimeout(() => setPulse(false), 1600);
         return;
       }
       email = userData.email;
@@ -54,6 +62,8 @@ export default function SignIn() {
 
     if (authError) {
       setError(authError.message);
+      setPulse(true);
+      setTimeout(() => setPulse(false), 1600);
     } else {
       console.log("User signed in:", data.user);
 
@@ -74,53 +84,64 @@ export default function SignIn() {
 
     if (error) {
       setError(error.message);
+      setPulse(true);
+      setTimeout(() => setPulse(false), 1600);
     }
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-zinc-900 backdrop-blur p-8 rounded-2xl shadow-lg">
-        <h1 className="text-2xl font-semibold mb-6 text-center">Sign In</h1>
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 dark">
+      <div className="w-full max-w-md bg-card backdrop-blur p-8 rounded-2xl shadow-lg">
+        <h1 className="text-2xl font-semibold mb-8 text-center">Sign In</h1>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          {error && <p className="text-red-500 text-center">{error}</p>}
+          {error && (
+            <p className="text-destructive text-center animate-slide-in">
+              {error}
+            </p>
+          )}
 
-          <button
+          <Button
             type="button"
             onClick={handleGitHubSignIn}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 mb-6 rounded font-semibold"
+            className="w-full bg-zinc-700 hover:bg-zinc-600 cursor-pointer text-foreground my-8 flex items-center justify-center gap-2"
           >
-            Sign In with GitHub
-          </button>
-          <div className="flex items-center gap-x-4 mb-6">
-            <hr className="flex-1 border-t border-neutral-700" />
-            <span className="text-sm text-neutral-200">or</span>
-            <hr className="flex-1 border-t border-neutral-700" />
+            <FaGithub className="w-5 h-5" />
+            GitHub
+          </Button>
+          <div className="flex items-center gap-x-4 mb-8">
+            <hr className="flex-1 border-t border-border" />
+            <span className="text-sm text-muted-foreground">or</span>
+            <hr className="flex-1 border-t border-border" />
           </div>
-          <input
-            className="w-full p-3 bg-black/30 rounded border border-neutral-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          <Input
+            className={`w-full bg-input border-border focus:ring-indigo-500 focus:shadow-glow transition-all duration-200 ${
+              pulse ? "animate-pulse-border" : ""
+            }`}
             type="text"
             placeholder="Email or Username"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
           />
-          <input
-            className="w-full p-3 bg-black/30 rounded border border-neutral-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          <Input
+            className={`w-full bg-input border-border focus:ring-indigo-500 focus:shadow-glow transition-all duration-200 ${
+              pulse ? "animate-pulse-border" : ""
+            }`}
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <button
+          <Button
             type="submit"
-            className="w-full bg-indigo-600 hover:bg-indigo-500 transition text-white py-3 rounded font-semibold"
+            className="w-full bg-indigo-600 hover:bg-indigo-500 transition text-foreground"
           >
             Sign In
-          </button>
+          </Button>
         </form>
         <p className="text-center text-sm mt-4">
           Don't have an account?{" "}
           <Link
-            href="/sign-up"
+            href="/auth/sign-up"
             className="text-indigo-400 hover:underline hover:font-bold"
           >
             Sign up
