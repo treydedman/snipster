@@ -8,31 +8,30 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground dark">
       {/* Hero Section */}
-      <section className="py-20 md:py-32 flex items-center justify-center bg-gradient-to-b from-background to-card/50">
+      <section className="py-20 md:py-24 flex items-center justify-center bg-gradient-to-b from-background to-card/50">
         <div className="max-w-4xl mx-auto text-center px-4 flex flex-col items-center">
           <img
-            src="/snipster-logo.png"
+            src="/snipster-logo2.png"
             alt="Snipster Logo"
-            className="h-12 w-[169px] md:h-16 md:w-[226px] mb-6 mx-auto shadow-lg"
+            className="h-[75px] w-[265px] md:h-[105px] md:w-[371px] mb-6 mx-auto shadow-lg"
           />
           <h1 className="text-3xl md:text-4xl font-bold mb-6">
             Code Snippets, Simplified
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground mb-8">
+          <p className="text-lg md:text-xl text-muted-foreground mb-6 md:mb-8">
             Save, manage, and share your code snippets with ease. Built for
             developers, by developers.
           </p>
           <div className="flex flex-col sm:flex-row gap-12 justify-center">
             <Button
               asChild
-              className="bg-indigo-600 hover:bg-indigo-500 text-foreground focus:ring-indigo-500 focus:shadow-glow transition-all duration-200 px-6 py-3 text-lg mt-8"
+              className="bg-indigo-600 hover:bg-indigo-500 text-foreground focus:ring-indigo-500 focus:shadow-glow transition-all duration-200 px-6 py-3 text-lg mt-6 md:mt-8"
             >
               <Link href="/auth/sign-up">Get Started</Link>
             </Button>
             <Button
               asChild
-              variant="outline"
-              className="border-border text-foreground hover:bg-indigo-500/20 focus:ring-indigo-500 focus:shadow-glow transition-all duration-200 px-6 py-3 text-lg mt-8"
+              className="border-1 border-zinc-700 text-foreground bg-zinc-800 hover:border-1 hover:border-indigo-600 hover:bg-indigo-600 focus:ring-indigo-500 focus:shadow-glow transition-all duration-200 px-6 py-3 text-lg mt-4 md:mt-8"
             >
               <Link href="/auth/sign-in">Sign In</Link>
             </Button>
