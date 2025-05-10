@@ -1,70 +1,45 @@
-import { createServerClient } from "@/lib/supabaseClient";
+import { createServerClient } from "@/lib/supabaseServer";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { User, Snippet } from "@/lib/types";
-import { Navbar } from "./components/Navbar";
-import { Button } from "@/components/ui/button";
-
-export const metadata = {
-  robots: "noindex, nofollow",
-  title: "Snipster Dashboard",
-  description: "Manage your code snippets",
-};
 
 export default async function DashboardPage() {
-  const supabase = createServerClient();
+  const cookieStore = await cookies();
+  const authToken = cookieStore.get(
+    "sb-hpnigpphcxzmxtfvrlyz-auth-token"
+  )?.value;
+  console.log("Server  Auth token cookie:", authToken);
+  console.log(
+    "Server  All cookies:",
+    (await cookieStore.getAll()).map((c) => `${c.name}=${c.value}`)
+  );
+
+  const supabase = await createServerClient();
+  // Try refreshing session
+  const { data: sessionData, error: sessionError } =
+    await supabase.auth.refreshSession();
+  console.log("Server  Refresh session data:", sessionData);
+  console.log("Server  Refresh session error:", sessionError);
+
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
-  console.log("Dashboard user:", user);
-  if (!user) redirect("/auth/sign-in");
+  console.log("Server  Dashboard user:", user);
+  console.log("Server  Dashboard auth error:", error);
 
-  await supabase.from("users").upsert({
-    id: user.id,
-    email: user.email!,
-    username: user.user_metadata.login || user.email!.split("@")[0],
-    github_username: user.user_metadata.login,
-    avatar_url: user.user_metadata.avatar_url,
-  });
-
-  const isGuest = user.email === "guest@example.com";
-  const snippetsQuery = isGuest
-    ? supabase
-        .from("snippets")
-        .select("*, shares(share_token)")
-        .eq(
-          "owner",
-          (
-            await supabase
-              .from("users")
-              .select("id")
-              .eq("email", "demo@example.com")
-              .single()
-          ).data!.id
-        )
-    : supabase
-        .from("snippets")
-        .select("*, shares(share_token)")
-        .eq("owner", user.id);
-  const { data: snippets } = await snippetsQuery;
+  if (!user) {
+    console.log("Server  Redirecting to /auth/sign-in due to no user");
+    redirect("/auth/sign-in");
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar user={user as User} />
-      <main className="max-w-7xl mx-auto p-4">
-        {!isGuest && (
-          <div className="mb-4">
-            <Button variant="default">Create Snippet</Button>
-          </div>
-        )}
-        <div>
-          {snippets?.map((snippet: Snippet) => (
-            <div key={snippet.id} className="p-4 border rounded">
-              <h3>{snippet.title}</h3>
-              <p>{snippet.language}</p>
-            </div>
-          ))}
-        </div>
-      </main>
+    <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-zinc-800 flex items-center justify-center">
+      <div className="text-center px-4">
+        <h1 className="text-3xl font-bold text-white mb-4">
+          Welcome to Snipster Dashboard
+        </h1>
+        <p className="text-white">Hello, {user.email}!</p>
+      </div>
     </div>
   );
 }
