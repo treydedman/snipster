@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/lib/theme-provider";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Fira_Code } from "next/font/google";
 import "@/app/globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const firaCode = Fira_Code({
   subsets: ["latin"],
+  variable: "--font-fira-code",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
