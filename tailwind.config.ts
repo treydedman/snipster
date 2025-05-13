@@ -23,13 +23,12 @@ const config: ExtendedConfig = {
   theme: {
     extend: {
       colors: {
-        cyan: "#00C3CC", // Logo gradient top, secondary color
-        lightCyan: "#E0F7FA", // Lighter variant for hover effects
-        darkCyan: "#008B9C", // Darker variant for dark mode
+        cyan: {
+          500: "#06b6d4",
+        },
         blue: {
           600: "#2563EB", // Logo gradient bottom, primary color
         },
-        mutedCyan: "#E6F6FA", // Muted cyan for backgrounds (light mode)
       },
     },
   },

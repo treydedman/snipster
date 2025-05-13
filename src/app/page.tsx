@@ -46,15 +46,13 @@ export default function HomePage() {
             </Button>
             <Button
               asChild
-              variant="outline"
-              className="border-zinc-700 bg-zinc-200 dark:bg-zinc-800 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-500"
+              className="text-zinc-600 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600"
             >
               <Link href="/auth/sign-in">Sign In</Link>
             </Button>
             <Button
               asChild
-              variant="outline"
-              className="border-accent bg-accent/10 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600"
+              className="text-zinc-600 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600"
             >
               <Link href="/guest-sign-in">Try It Out</Link>
             </Button>
@@ -67,31 +65,32 @@ export default function HomePage() {
             Why Snipster?
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="bg-white dark:bg-zinc-800 border border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/20 transition-shadow">
+            <Card className="bg-white dark:bg-zinc-800 border border-cyan-500 hover:shadow-xl hover:shadow-cyan-500/20 transition-shadow">
               <CardHeader>
                 <CardTitle className="text-xl font-semibold">
-                  Save Snippets Fast
+                  Github Integration
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Store your code snippets securely with a single click.
+                  Sign in with GitHub for a seamless developer experience.
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-card dark:bg-card text-card-foreground dark:text-card-foreground border-[1px] !border-cyan hover:shadow-md hover:shadow-cyan/50 transition-shadow">
+            <Card className="bg-white dark:bg-zinc-800 border border-cyan-500 hover:shadow-xl hover:shadow-cyan-500/20 transition-shadow">
               <CardHeader>
                 <CardTitle className="text-xl font-semibold">
-                  Organize with Tags
+                  Organize Snippets
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Use tags and languages to keep your snippets organized.
+                  Use folders,tags, and languages to keep your snippets
+                  organized.
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-card dark:bg-card text-card-foreground dark:text-card-foreground border-[1px] !border-cyan hover:shadow-md hover:shadow-cyan/50 transition-shadow">
+            <Card className="bg-white dark:bg-zinc-800 border border-cyan-500 hover:shadow-xl hover:shadow-cyan-500/20 transition-shadow">
               <CardHeader>
                 <CardTitle className="text-xl font-semibold">
                   Try as Guest
@@ -114,27 +113,21 @@ export default function HomePage() {
           <div className="flex justify-center gap-6">
             <Link
               href="/auth/sign-up"
-              className="text-blue-600 hover:text-blue-700 hover:underline"
+              className="text-blue-600 hover:font-bold hover:underline"
             >
               Sign Up
             </Link>
             <Link
               href="/auth/sign-in"
-              className="text-blue-600 hover:text-blue-700 hover:underline"
+              className="text-blue-600 hover:font-bold hover:underline"
             >
               Sign In
             </Link>
             <Link
               href="/guest-sign-in"
-              className="text-blue-600 hover:text-blue-700 hover:underline"
+              className="text-blue-600 hover:font-bold hover:underline"
             >
               Try It Out
-            </Link>
-            <Link
-              href="https://github.com/yourusername"
-              className="text-blue-600 hover:text-blue-700 hover:underline"
-            >
-              GitHub
             </Link>
           </div>
         </div>
