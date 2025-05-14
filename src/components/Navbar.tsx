@@ -38,12 +38,16 @@ export default function Navbar() {
         <div className="flex items-center gap-4">
           <Link
             href="/"
-            className="text-blue-600 hover:underline hover:font-bold  dark:text-blue-600 dark:hover:font-bold "
+            className="text-blue-600 hover:underline hover:font-bold  dark:text-blue-500 dark:hover:font-bold "
           >
             Home
           </Link>
-          <span className="text-zinc-500 cursor-not-allowed">Dashboard</span>
-          <span className="text-zinc-500 cursor-not-allowed">Profile</span>
+          <span className="text-blue-600 dark:text-blue-500 cursor-not-allowed">
+            Dashboard
+          </span>
+          <span className="text-blue-600 dark:text-blue-500 cursor-not-allowed">
+            Profile
+          </span>
 
           {/* Theme Toggle */}
           <DropdownMenu>

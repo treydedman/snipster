@@ -18,15 +18,19 @@ import { Button } from "@/components/ui/button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGithub } from "@fortawesome/free-brands-svg-icons";
 
+// Define the form schema using Zod
 const formSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
+// Infer the TypeScript type from the schema for form values
+type FormValues = z.infer<typeof formSchema>;
+
 export default function GuestSignIn() {
   const router = useRouter();
 
-  const form = useForm({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "Guest",
@@ -34,9 +38,18 @@ export default function GuestSignIn() {
     },
   });
 
-  const onSubmit = async (values) => {
+  const onSubmit = async (values: FormValues) => {
     const { password } = values;
+    // Ensure email is a string, with a fallback
     const email = process.env.NEXT_PUBLIC_GUEST_EMAIL;
+
+    // Validate that email is defined
+    if (!email) {
+      form.setError("root", {
+        message: "Guest email configuration is missing",
+      });
+      return;
+    }
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -98,11 +111,11 @@ export default function GuestSignIn() {
                   <FormControl>
                     <Input
                       {...field}
-                      type="password" // Shows filled circles
+                      type="password"
                       placeholder="Password"
                       value={
                         process.env.NEXT_PUBLIC_GUEST_PASSWORD || "guest123"
-                      } // Auto-filled
+                      }
                       readOnly
                       className="bg-muted"
                     />

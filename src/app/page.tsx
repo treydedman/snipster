@@ -65,7 +65,7 @@ export default function HomePage() {
             Why Snipster?
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="bg-white dark:bg-zinc-800 border border-cyan-500 hover:shadow-xl hover:shadow-cyan-500/20 transition-shadow">
+            <Card className="bg-white dark:bg-zinc-800 border border-blue-500 hover:shadow-xl hover:shadow-blue-500/20 transition-shadow">
               <CardHeader>
                 <CardTitle className="text-xl font-semibold">
                   Github Integration
@@ -77,7 +77,7 @@ export default function HomePage() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-white dark:bg-zinc-800 border border-cyan-500 hover:shadow-xl hover:shadow-cyan-500/20 transition-shadow">
+            <Card className="bg-white dark:bg-zinc-800 border border-blue-500 hover:shadow-xl hover:shadow-blue-500/20 transition-shadow">
               <CardHeader>
                 <CardTitle className="text-xl font-semibold">
                   Organize Snippets
@@ -90,7 +90,7 @@ export default function HomePage() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-white dark:bg-zinc-800 border border-cyan-500 hover:shadow-xl hover:shadow-cyan-500/20 transition-shadow">
+            <Card className="bg-white dark:bg-zinc-800 border border-blue-500 hover:shadow-xl hover:shadow-blue-500/20 transition-shadow">
               <CardHeader>
                 <CardTitle className="text-xl font-semibold">
                   Try as Guest
