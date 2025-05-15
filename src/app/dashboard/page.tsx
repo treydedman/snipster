@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/hljs";
+import Sidebar from "@/components/Sidebar"; // Import the Sidebar component
 
 type Snippet = {
   id: string;
@@ -21,14 +22,18 @@ type Folder = {
   name: string;
 };
 
+type ViewType = "all" | "folder" | "favorites" | "shared";
+
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; username: string } | null>(
     null
   );
-  const [folders, setFolders] = useState<Folder[]>([]);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [filteredSnippets, setFilteredSnippets] = useState<Snippet[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [selectedView, setSelectedView] = useState<ViewType>("all");
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +60,6 @@ export default function Dashboard() {
         const userId = session.user.id;
         console.log("Authenticated user ID:", userId);
 
-        // Fetch user profile for username
         const { data: userData, error: userError } = await supabase
           .from("users")
           .select("username")
@@ -69,7 +73,6 @@ export default function Dashboard() {
           setUser({ id: userId, username: userData.username || "User" });
         }
 
-        // Fetch folders
         const { data: folderData, error: folderError } = await supabase
           .from("folders")
           .select("id, name")
@@ -81,7 +84,6 @@ export default function Dashboard() {
           setFolders(folderData || []);
         }
 
-        // Fetch snippets
         const { data: snippetData, error: snippetError } = await supabase
           .from("snippets")
           .select("id, title, content, language, tags")
@@ -97,21 +99,20 @@ export default function Dashboard() {
           return;
         }
 
-        // Fetch folder associations
         const { data: snippetFoldersData, error: snippetFoldersError } =
           await supabase
             .from("snippet_folders")
             .select("snippet_id, folder_id")
             .in(
               "snippet_id",
-              snippetData.map((snippet) => snippet.id)
+              snippetData.map((snippet: { id: string }) => snippet.id)
             );
 
         if (snippetFoldersError) {
           console.error("Error fetching snippet folders:", snippetFoldersError);
         }
 
-        const formattedSnippets = snippetData.map((snippet) => ({
+        const formattedSnippets = snippetData.map((snippet: any) => ({
           id: snippet.id,
           title: snippet.title,
           content: snippet.content,
@@ -119,11 +120,12 @@ export default function Dashboard() {
           tags: snippet.tags,
           folder_ids: snippetFoldersData
             ? snippetFoldersData
-                .filter((sf) => sf.snippet_id === snippet.id)
-                .map((sf) => sf.folder_id)
+                .filter((sf: any) => sf.snippet_id === snippet.id)
+                .map((sf: any) => sf.folder_id)
             : [],
         }));
         setSnippets(formattedSnippets);
+        setFilteredSnippets(formattedSnippets);
       } catch (err) {
         console.error("Unexpected error:", err);
         setError("An unexpected error occurred");
@@ -135,13 +137,39 @@ export default function Dashboard() {
     fetchUserAndData();
   }, [router]);
 
-  const filteredSnippets = selectedFolder
-    ? snippets.filter((snippet) => snippet.folder_ids.includes(selectedFolder))
-    : snippets.filter((snippet) => snippet.folder_ids.length === 0);
+  // Handle view changes from Sidebar
+  const handleViewChange = (view: ViewType, folderId: string | null = null) => {
+    setSelectedView(view);
+    setSelectedFolderId(folderId);
+    if (view === "all") {
+      setFilteredSnippets(snippets);
+    } else if (view === "folder" && folderId) {
+      setFilteredSnippets(
+        snippets.filter((snippet) => snippet.folder_ids.includes(folderId))
+      );
+    } else if (view === "favorites") {
+      setFilteredSnippets([]);
+    } else if (view === "shared") {
+      setFilteredSnippets([]);
+    }
+  };
 
-  const desktopSnippetsCount = snippets.filter(
-    (snippet) => snippet.folder_ids.length === 0
-  ).length;
+  // Handle search from Sidebar
+  const handleSearch = (query: string) => {
+    if (!query) {
+      handleViewChange(selectedView, selectedFolderId);
+      return;
+    }
+
+    const lowerQuery = query.toLowerCase();
+    const filtered = snippets.filter(
+      (snippet) =>
+        snippet.title.toLowerCase().includes(lowerQuery) ||
+        snippet.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)) ||
+        snippet.language.toLowerCase().includes(lowerQuery)
+    );
+    setFilteredSnippets(filtered);
+  };
 
   if (loading) {
     return (
@@ -162,45 +190,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
-      <div className="w-64 bg-card p-4 border-r border-zinc-300 dark:border-zinc-600">
-        <h2 className="text-xl font-semibold text-foreground mb-4">Folders</h2>
-        <ul className="space-y-2">
-          <li>
-            <button
-              className={`w-full text-left p-2 rounded ${
-                selectedFolder === null
-                  ? "bg-primary text-primary-foreground"
-                  : "text-foreground hover:bg-muted"
-              }`}
-              onClick={() => setSelectedFolder(null)}
-            >
-              Desktop ({desktopSnippetsCount})
-            </button>
-          </li>
-          {folders.map((folder) => {
-            const folderSnippetCount = snippets.filter((snippet) =>
-              snippet.folder_ids.includes(folder.id)
-            ).length;
-            return (
-              <li key={folder.id}>
-                <button
-                  className={`w-full text-left p-2 rounded ${
-                    selectedFolder === folder.id
-                      ? "bg-primary text-primary-foreground"
-                      : "text-foreground hover:bg-muted"
-                  }`}
-                  onClick={() => setSelectedFolder(folder.id)}
-                >
-                  {folder.name} ({folderSnippetCount})
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        <Button className="mt-4 w-full bg-primary text-primary-foreground hover:bg-blue-700">
-          New Folder
-        </Button>
-      </div>
+      <Sidebar onViewChange={handleViewChange} onSearch={handleSearch} />
 
       {/* Main Content */}
       <div className="flex-1 p-8">
@@ -209,11 +199,15 @@ export default function Dashboard() {
         </h1>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-foreground">
-            {selectedFolder === null
-              ? "Desktop Snippets"
-              : `Snippets in ${
-                  folders.find((f) => f.id === selectedFolder)?.name
-                }`}
+            {selectedView === "all"
+              ? "All Snippets"
+              : selectedView === "folder"
+              ? `Snippets in ${
+                  folders.find((f) => f.id === selectedFolderId)?.name
+                }`
+              : selectedView === "favorites"
+              ? "Favorites"
+              : "Shared Snippets"}
           </h2>
           <Button className="bg-primary text-primary-foreground hover:bg-blue-700">
             New Snippet
@@ -251,9 +245,13 @@ export default function Dashboard() {
           </div>
         ) : (
           <p className="text-muted-foreground">
-            {selectedFolder === null
-              ? "No snippets on your desktop. Create one to get started!"
-              : "No snippets in this folder."}
+            {selectedView === "all"
+              ? "No snippets found. Create one to get started!"
+              : selectedView === "folder"
+              ? "No snippets in this folder."
+              : selectedView === "favorites"
+              ? "No favorites yet—star a snippet to add it here!"
+              : "No shared snippets yet—check back later!"}
           </p>
         )}
       </div>
