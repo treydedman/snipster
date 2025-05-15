@@ -55,7 +55,7 @@ export default function Navbar() {
               <Button
                 variant="outline"
                 size="icon"
-                className="border-zinc-700 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white"
+                className="border-zinc-700 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white cursor-pointer"
               >
                 <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                 <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />

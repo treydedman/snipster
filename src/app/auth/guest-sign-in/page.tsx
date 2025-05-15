@@ -131,7 +131,7 @@ export default function GuestSignIn() {
             )}
             <Button
               type="submit"
-              className="w-full bg-primary text-primary-foreground hover:bg-blue-700"
+              className="w-full bg-primary text-primary-foreground hover:bg-blue-700 cursor-pointer"
             >
               Continue as Guest
             </Button>

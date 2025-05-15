@@ -46,13 +46,13 @@ export default function HomePage() {
             </Button>
             <Button
               asChild
-              className="text-zinc-600 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600"
+              className="text-zinc-600 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white"
             >
               <Link href="/auth/sign-in">Sign In</Link>
             </Button>
             <Button
               asChild
-              className="text-zinc-600 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600"
+              className="text-zinc-600 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white"
             >
               <Link href="/auth/guest-sign-in">Try It Out</Link>
             </Button>
