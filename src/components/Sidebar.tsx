@@ -5,34 +5,39 @@ import { supabase } from "@/lib/supabaseClient";
 import { Input } from "@/components/ui/input";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faCode,
   faMagnifyingGlass,
+  faCode,
   faFolder,
   faFolderOpen,
   faPlus,
   faStar,
   faShareNodes,
-  faChevronDown,
-  faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 
 type Folder = { id: string; name: string; snippetCount: number };
 type ViewType = "all" | "folder" | "favorites" | "shared";
 
+type User = {
+  id: string;
+  username: string;
+  avatar_url?: string | null;
+};
+
 type SidebarProps = {
+  user: User | null;
   onViewChange: (view: ViewType, folderId?: string | null) => void;
   onSearch: (query: string) => void;
 };
 
-export default function Sidebar({ onViewChange, onSearch }: SidebarProps) {
+export default function Sidebar({
+  user,
+  onViewChange,
+  onSearch,
+}: SidebarProps) {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [currentView, setCurrentView] = useState<ViewType>("all");
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
-  const [isSharedOpen, setIsSharedOpen] = useState(false);
-  const [hasFavorites, setHasFavorites] = useState(false);
-  const [hasShared, setHasShared] = useState(false);
 
   useEffect(() => {
     const fetchFolders = async () => {
@@ -85,9 +90,13 @@ export default function Sidebar({ onViewChange, onSearch }: SidebarProps) {
   };
 
   return (
-    <div className="w-64 bg-card p-4 border-r border-zinc-100 dark:border-none h-screen overflow-y-auto">
-      {/* Top Title */}
-      <h1 className="text-xl font-bold text-foreground mb-4">Snippets</h1>
+    <div className="w-full md:w-64 flex-none bg-card p-4 border-r border-zinc-100 dark:border-none">
+      {/* User Greeting */}
+      {user && (
+        <p className="text-sm text-muted-foreground mb-2">
+          Hi, {user.username}
+        </p>
+      )}
 
       {/* Search Bar */}
       <div className="relative mb-4">
@@ -115,6 +124,8 @@ export default function Sidebar({ onViewChange, onSearch }: SidebarProps) {
         <FontAwesomeIcon icon={faCode} />
         <span>All Snippets</span>
       </button>
+
+      <hr className="border-t border-muted my-2" />
 
       {/* My Folders */}
       <div className="mt-2">
@@ -152,55 +163,47 @@ export default function Sidebar({ onViewChange, onSearch }: SidebarProps) {
         ))}
       </div>
 
-      {/* Favorites (Collapsible) */}
-      {hasFavorites && (
-        <div className="mt-2">
-          <button
-            onClick={() => setIsFavoritesOpen(!isFavoritesOpen)}
-            className="w-full text-left p-2 rounded flex items-center justify-between text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-700 cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faStar} />
-              <span>Favorites</span>
-            </div>
-            <FontAwesomeIcon
-              icon={isFavoritesOpen ? faChevronDown : faChevronRight}
-            />
-          </button>
-          {isFavoritesOpen && (
-            <div className="pl-6">
-              <p className="text-muted-foreground p-2">
-                Favorites will be listed here.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+      <hr className="border-t border-muted my-2" />
 
-      {/* Shared Snippets (Collapsible) */}
-      {hasShared && (
-        <div className="mt-2">
-          <button
-            onClick={() => setIsSharedOpen(!isSharedOpen)}
-            className="w-full text-left p-2 rounded flex items-center justify-between text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-700 cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faShareNodes} />
-              <span>Shared Snippets</span>
-            </div>
-            <FontAwesomeIcon
-              icon={isSharedOpen ? faChevronDown : faChevronRight}
-            />
-          </button>
-          {isSharedOpen && (
-            <div className="pl-6">
-              <p className="text-muted-foreground p-2">
-                Shared snippets will be listed here.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Favorites */}
+      <div className="mt-2">
+        <button
+          onClick={() => handleViewChange("favorites", null)}
+          className={`w-full text-left p-2 border-b border-muted dark:border-zinc-600 flex items-center gap-2 cursor-pointer ${
+            currentView === "favorites" && !currentFolderId
+              ? "bg-primary text-primary-foreground"
+              : "text-foreground"
+          }`}
+        >
+          <FontAwesomeIcon icon={faStar} />
+          <span>Favorites</span>
+        </button>
+        <hr className="border-t border-muted mb-2" />
+        <p className="text-muted-foreground p-2">
+          Favorites will be listed here.
+        </p>
+      </div>
+
+      <hr className="border-t border-muted my-2" />
+
+      {/* Shared */}
+      <div className="mt-2">
+        <button
+          onClick={() => handleViewChange("shared", null)}
+          className={`w-full text-left p-2 border-b border-muted dark:border-zinc-600 flex items-center gap-2 cursor-pointer ${
+            currentView === "shared" && !currentFolderId
+              ? "bg-primary text-primary-foreground"
+              : "text-foreground"
+          }`}
+        >
+          <FontAwesomeIcon icon={faShareNodes} />
+          <span>Shared</span>
+        </button>
+        <hr className="border-t border-muted mb-2" />
+        <p className="text-muted-foreground p-2">
+          Shared snippets will be listed here.
+        </p>
+      </div>
     </div>
   );
 }
