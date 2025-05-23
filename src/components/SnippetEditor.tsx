@@ -1,10 +1,12 @@
+"use client";
+
 import { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
-import { defaultKeymap } from "@codemirror/commands"; // Corrected import
+import { defaultKeymap } from "@codemirror/commands";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -35,9 +37,10 @@ export default function SnippetEditor({
   const [title, setTitle] = useState(snippet.title);
   const [content, setContent] = useState(snippet.content);
   const [language, setLanguage] = useState(snippet.language);
+  const isMounted = useRef(false); // Track if editor has been initialized
 
   useEffect(() => {
-    if (!editorRef.current) return;
+    if (!editorRef.current || isMounted.current) return;
 
     // Map language to CodeMirror language mode
     const languageMode = () => {
@@ -60,7 +63,7 @@ export default function SnippetEditor({
         lineNumbers(),
         languageMode(),
         isDarkMode ? oneDark : [],
-        keymap.of(defaultKeymap), // Ensure this works with the installed module
+        keymap.of(defaultKeymap),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             setContent(update.state.doc.toString());
@@ -75,25 +78,29 @@ export default function SnippetEditor({
     });
 
     viewRef.current = view;
+    isMounted.current = true;
 
     return () => {
       view.destroy();
       viewRef.current = null;
+      isMounted.current = false;
     };
-  }, [content, language]);
+  }, [language]); // Only reinitialize if language changes
 
   useEffect(() => {
     setTitle(snippet.title);
-    setContent(snippet.content);
     setLanguage(snippet.language);
-    if (viewRef.current) {
-      viewRef.current.dispatch({
-        changes: {
-          from: 0,
-          to: viewRef.current.state.doc.length,
-          insert: snippet.content,
-        },
-      });
+    if (snippet.content !== content) {
+      setContent(snippet.content);
+      if (viewRef.current) {
+        viewRef.current.dispatch({
+          changes: {
+            from: 0,
+            to: viewRef.current.state.doc.length,
+            insert: snippet.content,
+          },
+        });
+      }
     }
   }, [snippet]);
 
