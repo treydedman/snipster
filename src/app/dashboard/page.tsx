@@ -277,7 +277,7 @@ export default function Dashboard() {
               </p>
               <Button
                 className="bg-primary text-primary-foreground hover:bg-blue-700"
-                onClick={() => setSelectedSnippetId(null)} // Reset to show blank editor for new snippet
+                onClick={() => setSelectedSnippetId(null)}
               >
                 New Snippet
               </Button>
@@ -287,7 +287,9 @@ export default function Dashboard() {
             <hr className="border-t border-muted my-2" />
 
             {/* Snippet Cards */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto space-y-4">
+              {" "}
+              {/* Added space-y-4 for spacing */}
               {filteredSnippets.length > 0 ? (
                 filteredSnippets.map((snippet) => (
                   <SnippetCard

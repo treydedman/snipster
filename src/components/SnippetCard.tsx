@@ -34,16 +34,13 @@ export default function SnippetCard({
         <FontAwesomeIcon icon={faEllipsisV} className="text-muted-foreground" />
       </div>
       <div className="mt-1">
-        <span className="text-sm bg-muted px-2 py-1 rounded">
+        <span className="text-sm px-2 py-1 rounded dark:text-white font-bold">
           {snippet.language}
         </span>
       </div>
       <div className="mt-2 flex flex-wrap gap-1">
         {snippet.tags.slice(0, 3).map((tag, index) => (
-          <span
-            key={index}
-            className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded"
-          >
+          <span key={index} className="text-sm text-blue-500 px-2 py-1 rounded">
             {tag}
           </span>
         ))}
