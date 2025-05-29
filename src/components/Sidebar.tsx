@@ -16,6 +16,15 @@ import {
 
 type Folder = { id: string; name: string; snippetCount: number };
 type ViewType = "all" | "folder" | "favorites" | "shared";
+type Snippet = {
+  id: string;
+  title: string;
+  content: string;
+  language: string;
+  tags: string[];
+  folder_ids: string[];
+  isFavorite: boolean; // Added this line
+};
 
 type User = {
   id: string;
@@ -27,12 +36,14 @@ type SidebarProps = {
   user: User | null;
   onViewChange: (view: ViewType, folderId?: string | null) => void;
   onSearch: (query: string) => void;
+  filteredSnippets: Snippet[];
 };
 
 export default function Sidebar({
   user,
   onViewChange,
   onSearch,
+  filteredSnippets,
 }: SidebarProps) {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [currentView, setCurrentView] = useState<ViewType>("all");
@@ -88,6 +99,10 @@ export default function Sidebar({
   const handleAddFolder = () => {
     console.log("Add new folder clicked");
   };
+
+  const favoriteSnippets = filteredSnippets.filter(
+    (snippet) => snippet.isFavorite
+  );
 
   return (
     <div className="w-full md:w-64 flex-none bg-card p-4 border-r border-zinc-100 dark:border-none">
@@ -176,12 +191,23 @@ export default function Sidebar({
           }`}
         >
           <FontAwesomeIcon icon={faStar} />
-          <span>Favorites</span>
+          <span>Favorites ({favoriteSnippets.length})</span>
         </button>
         <hr className="border-t border-muted mb-2" />
-        <p className="text-muted-foreground p-2">
-          Favorites will be listed here.
-        </p>
+        {favoriteSnippets.length > 0 ? (
+          favoriteSnippets.map((snippet) => (
+            <div
+              key={snippet.id}
+              className="text-foreground p-2 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded cursor-pointer"
+            >
+              {snippet.title}
+            </div>
+          ))
+        ) : (
+          <p className="text-muted-foreground p-2">
+            No favorites yet—star a snippet to add it here!
+          </p>
+        )}
       </div>
 
       <hr className="border-t border-muted my-2" />

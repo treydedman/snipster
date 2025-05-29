@@ -16,6 +16,7 @@ type Snippet = {
   language: string;
   tags: string[];
   folder_ids: string[];
+  isFavorite: boolean; // Added this line
 };
 
 type Folder = {
@@ -124,7 +125,9 @@ export default function Dashboard() {
                 .filter((sf: any) => sf.snippet_id === snippet.id)
                 .map((sf: any) => sf.folder_id)
             : [],
+          isFavorite: false,
         }));
+        console.log("Initial snippets:", formattedSnippets);
         setSnippets(formattedSnippets);
         setFilteredSnippets(formattedSnippets);
       } catch (err) {
@@ -141,13 +144,37 @@ export default function Dashboard() {
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
-      console.log("Window width:", window.innerWidth, "isMobile:", mobile); // Debug
+      console.log("Window width:", window.innerWidth, "isMobile:", mobile);
       setIsMobile(mobile);
     };
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    console.log(
+      "Re-filtering snippets. Selected view:",
+      selectedView,
+      "Snippets:",
+      snippets
+    );
+    if (selectedView === "favorites") {
+      const filtered = snippets.filter((s) => s.isFavorite);
+      setFilteredSnippets(filtered);
+      console.log("Filtered snippets (favorites):", filtered);
+    } else if (selectedView === "all") {
+      setFilteredSnippets(snippets);
+    } else if (selectedView === "folder" && selectedFolderId) {
+      const filtered = snippets.filter((s) =>
+        s.folder_ids.includes(selectedFolderId)
+      );
+      setFilteredSnippets(filtered);
+      console.log("Filtered snippets (folder):", filtered);
+    } else if (selectedView === "shared") {
+      setFilteredSnippets([]);
+    }
+  }, [snippets, selectedView, selectedFolderId]);
 
   const selectedSnippet = useMemo(() => {
     return (
@@ -158,11 +185,13 @@ export default function Dashboard() {
         language: "",
         tags: [],
         folder_ids: [],
+        isFavorite: false,
       }
     );
   }, [selectedSnippetId, snippets]);
 
   const handleViewChange = (view: ViewType, folderId: string | null = null) => {
+    console.log("View changed to:", view, "Folder ID:", folderId);
     setSelectedView(view);
     setSelectedFolderId(folderId);
     setSelectedSnippetId(null);
@@ -170,19 +199,7 @@ export default function Dashboard() {
 
   const handleSearch = (query: string) => {
     if (!query) {
-      if (selectedView === "all") {
-        setFilteredSnippets(snippets);
-      } else if (selectedView === "folder" && selectedFolderId) {
-        setFilteredSnippets(
-          snippets.filter((snippet) =>
-            snippet.folder_ids.includes(selectedFolderId)
-          )
-        );
-      } else if (selectedView === "favorites") {
-        setFilteredSnippets([]);
-      } else if (selectedView === "shared") {
-        setFilteredSnippets([]);
-      }
+      handleViewChange(selectedView, selectedFolderId);
       return;
     }
     const lowerQuery = query.toLowerCase();
@@ -193,6 +210,7 @@ export default function Dashboard() {
         snippet.language.toLowerCase().includes(lowerQuery)
     );
     setFilteredSnippets(filtered);
+    console.log("Search filtered snippets:", filtered);
   };
 
   const handleSnippetClick = (snippetId: string) => {
@@ -205,15 +223,23 @@ export default function Dashboard() {
     setSnippets((prev) =>
       prev.map((s) => (s.id === updatedSnippet.id ? updatedSnippet : s))
     );
-    setFilteredSnippets((prev) =>
-      prev.map((s) => (s.id === updatedSnippet.id ? updatedSnippet : s))
-    );
-    setSelectedSnippetId(null);
   };
 
   const handleEditorCancel = () => {
     console.log("Canceling editor");
     setSelectedSnippetId(null);
+  };
+
+  const handleToggleFavorite = (snippetId: string) => {
+    setSnippets((prev) =>
+      prev.map((s) =>
+        s.id === snippetId ? { ...s, isFavorite: !s.isFavorite } : s
+      )
+    );
+    console.log(
+      `Toggled favorite for snippet ${snippetId}. Updated snippets:`,
+      snippets.map((s) => ({ id: s.id, isFavorite: s.isFavorite }))
+    );
   };
 
   const handleLogout = async () => {
@@ -247,6 +273,7 @@ export default function Dashboard() {
           user={user}
           onViewChange={handleViewChange}
           onSearch={handleSearch}
+          filteredSnippets={filteredSnippets}
         />
 
         {/* Main Content */}
@@ -288,15 +315,14 @@ export default function Dashboard() {
 
             {/* Snippet Cards */}
             <div className="flex-1 overflow-y-auto space-y-4">
-              {" "}
-              {/* Added space-y-4 for spacing */}
               {filteredSnippets.length > 0 ? (
                 filteredSnippets.map((snippet) => (
                   <SnippetCard
-                    key={snippet.id}
+                    key={`${snippet.id}-${snippet.isFavorite}`} // Force re-render on favorite change
                     snippet={snippet}
                     isSelected={selectedSnippetId === snippet.id}
                     onClick={() => handleSnippetClick(snippet.id)}
+                    onToggleFavorite={() => handleToggleFavorite(snippet.id)}
                   />
                 ))
               ) : (

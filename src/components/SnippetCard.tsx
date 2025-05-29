@@ -1,5 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
+import { useEffect, useState } from "react";
 
 type Snippet = {
   id: string;
@@ -7,19 +8,31 @@ type Snippet = {
   content: string;
   language: string;
   tags: string[];
+  isFavorite: boolean; // Added this line
 };
 
 type SnippetCardProps = {
   snippet: Snippet;
   isSelected: boolean;
   onClick: () => void;
+  onToggleFavorite: () => void;
 };
 
 export default function SnippetCard({
   snippet,
   isSelected,
   onClick,
+  onToggleFavorite,
 }: SnippetCardProps) {
+  const [localFavorite, setLocalFavorite] = useState(snippet.isFavorite);
+  console.log(
+    `Rendering SnippetCard for ${snippet.id}. isFavorite: ${snippet.isFavorite}, localFavorite: ${localFavorite}, Selected: ${isSelected}`
+  );
+
+  useEffect(() => {
+    setLocalFavorite(snippet.isFavorite);
+  }, [snippet.isFavorite]);
+
   return (
     <div
       onClick={onClick}
@@ -31,10 +44,27 @@ export default function SnippetCard({
     >
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold truncate">{snippet.title}</h3>
-        <FontAwesomeIcon icon={faEllipsisV} className="text-muted-foreground" />
+        <div className="flex items-center gap-2">
+          <span
+            className={`cursor-pointer text-xl ${
+              localFavorite ? "text-yellow-400" : "text-gray-400"
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setLocalFavorite(!localFavorite);
+              onToggleFavorite();
+            }}
+          >
+            {localFavorite ? "★" : "☆"}
+          </span>
+          <FontAwesomeIcon
+            icon={faEllipsisV}
+            className="text-muted-foreground"
+          />
+        </div>
       </div>
       <div className="mt-1">
-        <span className="text-sm px-2 py-1 rounded dark:text-white font-bold">
+        <span className="text-sm px-2 py-1 rounded text-white font-bold">
           {snippet.language}
         </span>
       </div>
