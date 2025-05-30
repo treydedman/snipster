@@ -11,15 +11,19 @@ import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { oneDark } from "@codemirror/theme-one-dark";
 
+type Snippet = {
+  id: string;
+  title: string;
+  content: string;
+  language: string;
+  tags: string[];
+  folder_ids: string[];
+  isFavorite: boolean;
+};
+
 type SnippetEditorProps = {
-  snippet: {
-    id: string;
-    title: string;
-    content: string;
-    language: string;
-    tags: string[];
-  };
-  onSave: (updatedSnippet: any) => void;
+  snippet: Snippet;
+  onSave: (updatedSnippet: Snippet) => void;
   onCancel: () => void;
   onNewSnippet: () => void;
   isMobile?: boolean;
@@ -105,7 +109,15 @@ export default function SnippetEditor({
   }, [snippet]);
 
   const handleSave = () => {
-    onSave({ ...snippet, title, content, language });
+    onSave({
+      ...snippet,
+      title,
+      content,
+      language,
+      tags: snippet.tags,
+      folder_ids: snippet.folder_ids,
+      isFavorite: snippet.isFavorite,
+    });
   };
 
   return (

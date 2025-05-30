@@ -16,7 +16,7 @@ type Snippet = {
   language: string;
   tags: string[];
   folder_ids: string[];
-  isFavorite: boolean; // Added this line
+  isFavorite: boolean;
 };
 
 type Folder = {
@@ -77,7 +77,7 @@ export default function Dashboard() {
 
         const { data: folderData, error: folderError } = await supabase
           .from("folders")
-          .select("id, name")
+          .select("id, name") // Fixed from "select("id, name")
           .eq("owner", userId);
 
         if (folderError) {
@@ -157,7 +157,9 @@ export default function Dashboard() {
       "Re-filtering snippets. Selected view:",
       selectedView,
       "Snippets:",
-      snippets
+      snippets,
+      "SelectedSnippetId:",
+      selectedSnippetId
     );
     if (selectedView === "favorites") {
       const filtered = snippets.filter((s) => s.isFavorite);
@@ -191,10 +193,25 @@ export default function Dashboard() {
   }, [selectedSnippetId, snippets]);
 
   const handleViewChange = (view: ViewType, folderId: string | null = null) => {
-    console.log("View changed to:", view, "Folder ID:", folderId);
+    console.log(
+      "View changed to:",
+      view,
+      "Folder ID:",
+      folderId,
+      "SelectedSnippetId before:",
+      selectedSnippetId
+    );
+    if (
+      view !== "all" &&
+      view !== "favorites" &&
+      view !== "shared" &&
+      !folderId
+    ) {
+      setSelectedSnippetId(null);
+    }
     setSelectedView(view);
     setSelectedFolderId(folderId);
-    setSelectedSnippetId(null);
+    console.log("SelectedSnippetId after:", selectedSnippetId);
   };
 
   const handleSearch = (query: string) => {
@@ -214,7 +231,12 @@ export default function Dashboard() {
   };
 
   const handleSnippetClick = (snippetId: string) => {
-    console.log("Selected snippet ID:", snippetId);
+    console.log(
+      "Selected snippet ID:",
+      snippetId,
+      "Current selectedSnippetId:",
+      selectedSnippetId
+    );
     setSelectedSnippetId(snippetId);
   };
 
@@ -240,6 +262,39 @@ export default function Dashboard() {
       `Toggled favorite for snippet ${snippetId}. Updated snippets:`,
       snippets.map((s) => ({ id: s.id, isFavorite: s.isFavorite }))
     );
+  };
+
+  const handleDelete = async (snippetId: string) => {
+    console.log("Deleting snippet:", snippetId);
+    try {
+      // Delete snippet from Supabase
+      const { error: snippetError } = await supabase
+        .from("snippets")
+        .delete()
+        .eq("id", snippetId);
+      if (snippetError) {
+        console.error("Error deleting snippet:", snippetError.message);
+        return;
+      }
+
+      // Delete associated snippet_folders entries
+      const { error: folderError } = await supabase
+        .from("snippet_folders")
+        .delete()
+        .eq("snippet_id", snippetId);
+      if (folderError) {
+        console.error("Error deleting snippet folders:", folderError.message);
+        return;
+      }
+
+      // Update local state
+      setSnippets((prev) => prev.filter((s) => s.id !== snippetId));
+      if (selectedSnippetId === snippetId) {
+        setSelectedSnippetId(null); // Close editor if deleting the open snippet
+      }
+    } catch (err) {
+      console.error("Unexpected error deleting snippet:", err);
+    }
   };
 
   const handleLogout = async () => {
@@ -274,6 +329,7 @@ export default function Dashboard() {
           onViewChange={handleViewChange}
           onSearch={handleSearch}
           filteredSnippets={filteredSnippets}
+          onSnippetClick={handleSnippetClick}
         />
 
         {/* Main Content */}
@@ -323,6 +379,7 @@ export default function Dashboard() {
                     isSelected={selectedSnippetId === snippet.id}
                     onClick={() => handleSnippetClick(snippet.id)}
                     onToggleFavorite={() => handleToggleFavorite(snippet.id)}
+                    onDelete={handleDelete}
                   />
                 ))
               ) : (

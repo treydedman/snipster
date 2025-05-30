@@ -23,7 +23,7 @@ type Snippet = {
   language: string;
   tags: string[];
   folder_ids: string[];
-  isFavorite: boolean; // Added this line
+  isFavorite: boolean;
 };
 
 type User = {
@@ -37,6 +37,7 @@ type SidebarProps = {
   onViewChange: (view: ViewType, folderId?: string | null) => void;
   onSearch: (query: string) => void;
   filteredSnippets: Snippet[];
+  onSnippetClick: (snippetId: string) => void; // Added prop
 };
 
 export default function Sidebar({
@@ -44,6 +45,7 @@ export default function Sidebar({
   onViewChange,
   onSearch,
   filteredSnippets,
+  onSnippetClick, // Added prop
 }: SidebarProps) {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [currentView, setCurrentView] = useState<ViewType>("all");
@@ -199,6 +201,7 @@ export default function Sidebar({
             <div
               key={snippet.id}
               className="text-foreground p-2 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded cursor-pointer"
+              onClick={() => onSnippetClick(snippet.id)} // Added onClick handler
             >
               {snippet.title}
             </div>
