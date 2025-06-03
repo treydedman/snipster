@@ -3,6 +3,15 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMagnifyingGlass,
@@ -37,7 +46,7 @@ type SidebarProps = {
   onViewChange: (view: ViewType, folderId?: string | null) => void;
   onSearch: (query: string) => void;
   filteredSnippets: Snippet[];
-  onSnippetClick: (snippetId: string) => void; // Added prop
+  onSnippetClick: (snippetId: string) => void;
 };
 
 export default function Sidebar({
@@ -45,12 +54,14 @@ export default function Sidebar({
   onViewChange,
   onSearch,
   filteredSnippets,
-  onSnippetClick, // Added prop
+  onSnippetClick,
 }: SidebarProps) {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [currentView, setCurrentView] = useState<ViewType>("all");
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAddFolderOpen, setIsAddFolderOpen] = useState(false); // State for dialog
+  const [newFolderName, setNewFolderName] = useState(""); // State for folder name input
 
   useEffect(() => {
     const fetchFolders = async () => {
@@ -98,8 +109,40 @@ export default function Sidebar({
     onViewChange(view, folderId);
   };
 
-  const handleAddFolder = () => {
-    console.log("Add new folder clicked");
+  const handleAddFolder = async () => {
+    if (!newFolderName.trim()) {
+      console.error("Folder name cannot be empty");
+      return;
+    }
+
+    const { data: userData } = await supabase.auth.getSession();
+    const userId = userData?.session?.user?.id;
+
+    if (!userId) {
+      console.error("No user logged in");
+      return;
+    }
+
+    try {
+      // Insert new folder into Supabase
+      const { data: newFolder, error } = await supabase
+        .from("folders")
+        .insert({ name: newFolderName, owner: userId })
+        .select("id, name")
+        .single();
+
+      if (error) {
+        console.error("Error creating folder:", error.message);
+        return;
+      }
+
+      // Update local state
+      setFolders([...folders, { ...newFolder, snippetCount: 0 }]);
+      setNewFolderName(""); // Reset input
+      setIsAddFolderOpen(false); // Close dialog
+    } catch (err) {
+      console.error("Unexpected error creating folder:", err);
+    }
   };
 
   const favoriteSnippets = filteredSnippets.filter(
@@ -148,12 +191,40 @@ export default function Sidebar({
       <div className="mt-2">
         <div className="flex justify-between items-center p-2 border-b border-muted dark:border-zinc-600">
           <span className="text-foreground">My Folders</span>
-          <button
-            onClick={handleAddFolder}
-            className="text-muted-foreground hover:text-foreground cursor-pointer"
-          >
-            <FontAwesomeIcon icon={faPlus} />
-          </button>
+          <Dialog open={isAddFolderOpen} onOpenChange={setIsAddFolderOpen}>
+            <DialogTrigger asChild>
+              <button
+                className="text-muted-foreground hover:text-foreground cursor-pointer"
+                onClick={() => setIsAddFolderOpen(true)}
+              >
+                <FontAwesomeIcon icon={faPlus} />
+              </button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Folder</DialogTitle>
+              </DialogHeader>
+              <Input
+                type="text"
+                placeholder="Folder name"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                className="mt-2"
+              />
+              <DialogFooter className="mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setNewFolderName("");
+                    setIsAddFolderOpen(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleAddFolder}>Create</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
         <hr className="border-t border-muted mb-2" />
         {folders.map((folder) => (
@@ -201,7 +272,7 @@ export default function Sidebar({
             <div
               key={snippet.id}
               className="text-foreground p-2 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded cursor-pointer"
-              onClick={() => onSnippetClick(snippet.id)} // Added onClick handler
+              onClick={() => onSnippetClick(snippet.id)}
             >
               {snippet.title}
             </div>

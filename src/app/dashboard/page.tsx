@@ -77,7 +77,7 @@ export default function Dashboard() {
 
         const { data: folderData, error: folderError } = await supabase
           .from("folders")
-          .select("id, name") // Fixed from "select("id, name")
+          .select("id, name")
           .eq("owner", userId);
 
         if (folderError) {
@@ -267,7 +267,6 @@ export default function Dashboard() {
   const handleDelete = async (snippetId: string) => {
     console.log("Deleting snippet:", snippetId);
     try {
-      // Delete snippet from Supabase
       const { error: snippetError } = await supabase
         .from("snippets")
         .delete()
@@ -277,7 +276,6 @@ export default function Dashboard() {
         return;
       }
 
-      // Delete associated snippet_folders entries
       const { error: folderError } = await supabase
         .from("snippet_folders")
         .delete()
@@ -287,13 +285,48 @@ export default function Dashboard() {
         return;
       }
 
-      // Update local state
       setSnippets((prev) => prev.filter((s) => s.id !== snippetId));
       if (selectedSnippetId === snippetId) {
-        setSelectedSnippetId(null); // Close editor if deleting the open snippet
+        setSelectedSnippetId(null);
       }
     } catch (err) {
       console.error("Unexpected error deleting snippet:", err);
+    }
+  };
+
+  const handleMoveToFolder = async (snippetId: string, folderId: string) => {
+    console.log(`Moving snippet ${snippetId} to folder ${folderId}`);
+    try {
+      // Delete existing snippet_folders entries for this snippet
+      const { error: deleteError } = await supabase
+        .from("snippet_folders")
+        .delete()
+        .eq("snippet_id", snippetId);
+      if (deleteError) {
+        console.error(
+          "Error deleting existing snippet folders:",
+          deleteError.message
+        );
+        return;
+      }
+
+      // Insert new snippet_folders entry
+      const { error: insertError } = await supabase
+        .from("snippet_folders")
+        .insert({ snippet_id: snippetId, folder_id: folderId });
+      if (insertError) {
+        console.error("Error inserting snippet folder:", insertError.message);
+        return;
+      }
+
+      // Update local state
+      setSnippets((prev) =>
+        prev.map((s) =>
+          s.id === snippetId ? { ...s, folder_ids: [folderId] } : s
+        )
+      );
+    } catch (err) {
+      console.error("Unexpected error moving snippet:", err);
     }
   };
 
@@ -374,12 +407,14 @@ export default function Dashboard() {
               {filteredSnippets.length > 0 ? (
                 filteredSnippets.map((snippet) => (
                   <SnippetCard
-                    key={`${snippet.id}-${snippet.isFavorite}`} // Force re-render on favorite change
+                    key={`${snippet.id}-${snippet.isFavorite}`}
                     snippet={snippet}
                     isSelected={selectedSnippetId === snippet.id}
                     onClick={() => handleSnippetClick(snippet.id)}
                     onToggleFavorite={() => handleToggleFavorite(snippet.id)}
                     onDelete={handleDelete}
+                    onMoveToFolder={handleMoveToFolder} // Added prop
+                    folders={folders} // Added prop
                   />
                 ))
               ) : (

@@ -1,6 +1,21 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+type Folder = {
+  id: string;
+  name: string;
+};
 
 type Snippet = {
   id: string;
@@ -9,6 +24,7 @@ type Snippet = {
   language: string;
   tags: string[];
   isFavorite: boolean;
+  folder_ids: string[];
 };
 
 type SnippetCardProps = {
@@ -17,6 +33,8 @@ type SnippetCardProps = {
   onClick: () => void;
   onToggleFavorite: () => void;
   onDelete: (snippetId: string) => void;
+  onMoveToFolder: (snippetId: string, folderId: string) => void;
+  folders: Folder[];
 };
 
 export default function SnippetCard({
@@ -25,10 +43,10 @@ export default function SnippetCard({
   onClick,
   onToggleFavorite,
   onDelete,
+  onMoveToFolder,
+  folders,
 }: SnippetCardProps) {
   const [localFavorite, setLocalFavorite] = useState(snippet.isFavorite);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   console.log(
     `Rendering SnippetCard for ${snippet.id}. isFavorite: ${snippet.isFavorite}, localFavorite: ${localFavorite}, Selected: ${isSelected}`
@@ -38,31 +56,19 @@ export default function SnippetCard({
     setLocalFavorite(snippet.isFavorite);
   }, [snippet.isFavorite]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleMenuToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsMenuOpen(!isMenuOpen);
-  };
-
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsMenuOpen(false);
     onClick();
   };
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsMenuOpen(false);
     onDelete(snippet.id);
+  };
+
+  const handleMoveToFolder = (e: React.MouseEvent, folderId: string) => {
+    e.stopPropagation();
+    onMoveToFolder(snippet.id, folderId);
   };
 
   return (
@@ -70,13 +76,13 @@ export default function SnippetCard({
       onClick={onClick}
       className={`p-4 rounded-lg cursor-pointer border-2 ${
         isSelected
-          ? "border-blue-500 bg-card" // Changed to blue border
+          ? "border-blue-500 bg-card"
           : "border-transparent bg-card hover:bg-zinc-100 dark:hover:bg-zinc-700"
       }`}
     >
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold truncate">{snippet.title}</h3>
-        <div className="flex items-center gap-2 relative">
+        <div className="flex items-center gap-3">
           <span
             className={`cursor-pointer text-xl ${
               localFavorite ? "text-yellow-400" : "text-gray-400"
@@ -89,33 +95,58 @@ export default function SnippetCard({
           >
             {localFavorite ? "★" : "☆"}
           </span>
-          <div ref={menuRef}>
-            <FontAwesomeIcon
-              icon={faEllipsisV}
-              className="text-muted-foreground cursor-pointer"
-              onClick={handleMenuToggle}
-            />
-            {isMenuOpen && (
-              <div className="absolute right-0 top-6 bg-background border border-muted rounded shadow-lg z-10">
-                <button
-                  className="block w-full text-left px-4 py-2 text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                  onClick={handleEdit}
-                >
-                  Edit
-                </button>
-                <button
-                  className="block w-full text-left px-4 py-2 text-red-500 hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                  onClick={handleDelete}
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-6 h-6 rounded-full p-0 text-muted-foreground hover:cursor-pointer hover:bg-transparent forced-no-hover-bg" // Added specific class
+                style={{ backgroundColor: "transparent" }} // Inline fallback
+                onClick={(e) => e.stopPropagation()}
+              >
+                <FontAwesomeIcon icon={faEllipsisV} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-40">
+              <DropdownMenuItem
+                onClick={handleEdit}
+                className="hover:cursor-pointer"
+              >
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="hover:cursor-pointer">
+                  Move to Folder
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  {folders.length > 0 ? (
+                    folders.map((folder) => (
+                      <DropdownMenuItem
+                        key={folder.id}
+                        onClick={(e) => handleMoveToFolder(e, folder.id)}
+                        className="hover:cursor-pointer"
+                      >
+                        {folder.name}
+                      </DropdownMenuItem>
+                    ))
+                  ) : (
+                    <DropdownMenuItem disabled>
+                      No folders available
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuItem
+                onClick={handleDelete}
+                className="text-red-500 hover:cursor-pointer"
+              >
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       <div className="mt-1">
-        <span className="text-sm px-2 py-1 rounded dark:text-white font-bold">
+        <span className="text-sm px-2 py-1 rounded text-white font-bold">
           {snippet.language}
         </span>
       </div>
