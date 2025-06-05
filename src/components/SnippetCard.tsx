@@ -1,6 +1,6 @@
+import { useState, useEffect } from "react"; // Added missing imports
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -47,10 +47,6 @@ export default function SnippetCard({
   folders,
 }: SnippetCardProps) {
   const [localFavorite, setLocalFavorite] = useState(snippet.isFavorite);
-
-  console.log(
-    `Rendering SnippetCard for ${snippet.id}. isFavorite: ${snippet.isFavorite}, localFavorite: ${localFavorite}, Selected: ${isSelected}`
-  );
 
   useEffect(() => {
     setLocalFavorite(snippet.isFavorite);
@@ -99,8 +95,8 @@ export default function SnippetCard({
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="w-6 h-6 rounded-full p-0 text-muted-foreground hover:cursor-pointer hover:bg-transparent forced-no-hover-bg" // Added specific class
-                style={{ backgroundColor: "transparent" }} // Inline fallback
+                className="w-6 h-6 rounded-full p-0 text-muted-foreground hover:cursor-pointer hover:bg-transparent forced-no-hover-bg"
+                style={{ backgroundColor: "transparent" }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <FontAwesomeIcon icon={faEllipsisV} />
@@ -117,7 +113,7 @@ export default function SnippetCard({
                 <DropdownMenuSubTrigger className="hover:cursor-pointer">
                   Move to Folder
                 </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
+                <DropdownMenuSubContent className="max-h-48 overflow-y-auto">
                   {folders.length > 0 ? (
                     folders.map((folder) => (
                       <DropdownMenuItem

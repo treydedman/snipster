@@ -12,6 +12,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMagnifyingGlass,
@@ -60,8 +61,8 @@ export default function Sidebar({
   const [currentView, setCurrentView] = useState<ViewType>("all");
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isAddFolderOpen, setIsAddFolderOpen] = useState(false); // State for dialog
-  const [newFolderName, setNewFolderName] = useState(""); // State for folder name input
+  const [isAddFolderOpen, setIsAddFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
 
   useEffect(() => {
     const fetchFolders = async () => {
@@ -75,10 +76,7 @@ export default function Sidebar({
         .select("id, name")
         .eq("owner", userId);
 
-      if (folderError) {
-        console.error("Error fetching folders:", folderError);
-        return;
-      }
+      if (folderError) return;
 
       const foldersWithCounts = await Promise.all(
         folderData.map(async (folder: { id: string; name: string }) => {
@@ -111,7 +109,7 @@ export default function Sidebar({
 
   const handleAddFolder = async () => {
     if (!newFolderName.trim()) {
-      console.error("Folder name cannot be empty");
+      toast.error("Folder name cannot be empty.");
       return;
     }
 
@@ -119,29 +117,35 @@ export default function Sidebar({
     const userId = userData?.session?.user?.id;
 
     if (!userId) {
-      console.error("No user logged in");
+      toast.error("No user logged in.");
       return;
     }
 
     try {
-      // Insert new folder into Supabase
-      const { data: newFolder, error } = await supabase
+      const { error } = await supabase
         .from("folders")
         .insert({ name: newFolderName, owner: userId })
         .select("id, name")
         .single();
 
       if (error) {
-        console.error("Error creating folder:", error.message);
+        toast.error(error.message || "Failed to create folder.");
         return;
       }
 
-      // Update local state
-      setFolders([...folders, { ...newFolder, snippetCount: 0 }]);
-      setNewFolderName(""); // Reset input
-      setIsAddFolderOpen(false); // Close dialog
-    } catch (err) {
-      console.error("Unexpected error creating folder:", err);
+      const { data: newFolderData } = await supabase
+        .from("folders")
+        .select("id, name")
+        .eq("name", newFolderName)
+        .eq("owner", userId)
+        .single();
+
+      setFolders([...folders, { ...newFolderData, snippetCount: 0 }]);
+      setNewFolderName("");
+      setIsAddFolderOpen(false);
+      toast.success("Folder created successfully.");
+    } catch {
+      toast.error("An unexpected error occurred.");
     }
   };
 
@@ -151,14 +155,12 @@ export default function Sidebar({
 
   return (
     <div className="w-full md:w-64 flex-none bg-card p-4 border-r border-zinc-100 dark:border-none">
-      {/* User Greeting */}
       {user && (
         <p className="text-sm text-muted-foreground mb-2">
           Hi, {user.username}
         </p>
       )}
 
-      {/* Search Bar */}
       <div className="relative mb-4">
         <Input
           type="text"
@@ -172,7 +174,6 @@ export default function Sidebar({
         </span>
       </div>
 
-      {/* All Snippets */}
       <button
         onClick={() => handleViewChange("all", null)}
         className={`w-full text-left p-2 rounded flex items-center gap-2 cursor-pointer ${
@@ -187,7 +188,6 @@ export default function Sidebar({
 
       <hr className="border-t border-muted my-2" />
 
-      {/* My Folders */}
       <div className="mt-2">
         <div className="flex justify-between items-center p-2 border-b border-muted dark:border-zinc-600">
           <span className="text-foreground">My Folders</span>
@@ -253,7 +253,6 @@ export default function Sidebar({
 
       <hr className="border-t border-muted my-2" />
 
-      {/* Favorites */}
       <div className="mt-2">
         <button
           onClick={() => handleViewChange("favorites", null)}
@@ -286,7 +285,6 @@ export default function Sidebar({
 
       <hr className="border-t border-muted my-2" />
 
-      {/* Shared */}
       <div className="mt-2">
         <button
           onClick={() => handleViewChange("shared", null)}

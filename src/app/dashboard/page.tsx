@@ -54,7 +54,6 @@ export default function Dashboard() {
         } = await supabase.auth.getSession();
 
         if (sessionError) {
-          console.error("Error fetching session:", sessionError.message);
           setError("Failed to authenticate");
           setLoading(false);
           return;
@@ -81,7 +80,7 @@ export default function Dashboard() {
           .eq("owner", userId);
 
         if (folderError) {
-          console.error("Error fetching folders:", folderError.message);
+          setFolders([]);
         } else {
           setFolders(folderData || []);
         }
@@ -92,7 +91,6 @@ export default function Dashboard() {
           .eq("owner", userId);
 
         if (snippetError) {
-          console.error("Error fetching snippets:", snippetError.message);
           setError("Failed to load snippets");
           setLoading(false);
           return;
@@ -108,30 +106,35 @@ export default function Dashboard() {
             );
 
         if (snippetFoldersError) {
-          console.error(
-            "Error fetching snippet folders:",
-            snippetFoldersError.message
+          setSnippets(
+            snippetData.map((snippet: any) => ({
+              id: snippet.id,
+              title: snippet.title,
+              content: snippet.content,
+              language: snippet.language.toLowerCase(),
+              tags: snippet.tags,
+              folder_ids: [],
+              isFavorite: false,
+            }))
           );
+        } else {
+          const formattedSnippets = snippetData.map((snippet: any) => ({
+            id: snippet.id,
+            title: snippet.title,
+            content: snippet.content,
+            language: snippet.language.toLowerCase(),
+            tags: snippet.tags,
+            folder_ids: snippetFoldersData
+              ? snippetFoldersData
+                  .filter((sf: any) => sf.snippet_id === snippet.id)
+                  .map((sf: any) => sf.folder_id)
+              : [],
+            isFavorite: false,
+          }));
+          setSnippets(formattedSnippets);
+          setFilteredSnippets(formattedSnippets);
         }
-
-        const formattedSnippets = snippetData.map((snippet: any) => ({
-          id: snippet.id,
-          title: snippet.title,
-          content: snippet.content,
-          language: snippet.language.toLowerCase(),
-          tags: snippet.tags,
-          folder_ids: snippetFoldersData
-            ? snippetFoldersData
-                .filter((sf: any) => sf.snippet_id === snippet.id)
-                .map((sf: any) => sf.folder_id)
-            : [],
-          isFavorite: false,
-        }));
-        console.log("Initial snippets:", formattedSnippets);
-        setSnippets(formattedSnippets);
-        setFilteredSnippets(formattedSnippets);
-      } catch (err) {
-        console.error("Unexpected error:", err);
+      } catch {
         setError("An unexpected error occurred");
       } finally {
         setLoading(false);
@@ -143,9 +146,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      console.log("Window width:", window.innerWidth, "isMobile:", mobile);
-      setIsMobile(mobile);
+      setIsMobile(window.innerWidth < 768);
     };
     handleResize();
     window.addEventListener("resize", handleResize);
@@ -153,26 +154,14 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    console.log(
-      "Re-filtering snippets. Selected view:",
-      selectedView,
-      "Snippets:",
-      snippets,
-      "SelectedSnippetId:",
-      selectedSnippetId
-    );
     if (selectedView === "favorites") {
-      const filtered = snippets.filter((s) => s.isFavorite);
-      setFilteredSnippets(filtered);
-      console.log("Filtered snippets (favorites):", filtered);
+      setFilteredSnippets(snippets.filter((s) => s.isFavorite));
     } else if (selectedView === "all") {
       setFilteredSnippets(snippets);
     } else if (selectedView === "folder" && selectedFolderId) {
-      const filtered = snippets.filter((s) =>
-        s.folder_ids.includes(selectedFolderId)
+      setFilteredSnippets(
+        snippets.filter((s) => s.folder_ids.includes(selectedFolderId))
       );
-      setFilteredSnippets(filtered);
-      console.log("Filtered snippets (folder):", filtered);
     } else if (selectedView === "shared") {
       setFilteredSnippets([]);
     }
@@ -193,14 +182,6 @@ export default function Dashboard() {
   }, [selectedSnippetId, snippets]);
 
   const handleViewChange = (view: ViewType, folderId: string | null = null) => {
-    console.log(
-      "View changed to:",
-      view,
-      "Folder ID:",
-      folderId,
-      "SelectedSnippetId before:",
-      selectedSnippetId
-    );
     if (
       view !== "all" &&
       view !== "favorites" &&
@@ -211,7 +192,6 @@ export default function Dashboard() {
     }
     setSelectedView(view);
     setSelectedFolderId(folderId);
-    console.log("SelectedSnippetId after:", selectedSnippetId);
   };
 
   const handleSearch = (query: string) => {
@@ -220,35 +200,27 @@ export default function Dashboard() {
       return;
     }
     const lowerQuery = query.toLowerCase();
-    const filtered = snippets.filter(
-      (snippet) =>
-        snippet.title.toLowerCase().includes(lowerQuery) ||
-        snippet.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)) ||
-        snippet.language.toLowerCase().includes(lowerQuery)
+    setFilteredSnippets(
+      snippets.filter(
+        (snippet) =>
+          snippet.title.toLowerCase().includes(lowerQuery) ||
+          snippet.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)) ||
+          snippet.language.toLowerCase().includes(lowerQuery)
+      )
     );
-    setFilteredSnippets(filtered);
-    console.log("Search filtered snippets:", filtered);
   };
 
   const handleSnippetClick = (snippetId: string) => {
-    console.log(
-      "Selected snippet ID:",
-      snippetId,
-      "Current selectedSnippetId:",
-      selectedSnippetId
-    );
     setSelectedSnippetId(snippetId);
   };
 
   const handleEditorSave = (updatedSnippet: Snippet) => {
-    console.log("Saving snippet:", updatedSnippet);
     setSnippets((prev) =>
       prev.map((s) => (s.id === updatedSnippet.id ? updatedSnippet : s))
     );
   };
 
   const handleEditorCancel = () => {
-    console.log("Canceling editor");
     setSelectedSnippetId(null);
   };
 
@@ -258,76 +230,48 @@ export default function Dashboard() {
         s.id === snippetId ? { ...s, isFavorite: !s.isFavorite } : s
       )
     );
-    console.log(
-      `Toggled favorite for snippet ${snippetId}. Updated snippets:`,
-      snippets.map((s) => ({ id: s.id, isFavorite: s.isFavorite }))
-    );
   };
 
   const handleDelete = async (snippetId: string) => {
-    console.log("Deleting snippet:", snippetId);
     try {
       const { error: snippetError } = await supabase
         .from("snippets")
         .delete()
         .eq("id", snippetId);
-      if (snippetError) {
-        console.error("Error deleting snippet:", snippetError.message);
-        return;
-      }
+      if (snippetError) return;
 
       const { error: folderError } = await supabase
         .from("snippet_folders")
         .delete()
         .eq("snippet_id", snippetId);
-      if (folderError) {
-        console.error("Error deleting snippet folders:", folderError.message);
-        return;
-      }
+      if (folderError) return;
 
       setSnippets((prev) => prev.filter((s) => s.id !== snippetId));
       if (selectedSnippetId === snippetId) {
         setSelectedSnippetId(null);
       }
-    } catch (err) {
-      console.error("Unexpected error deleting snippet:", err);
-    }
+    } catch {}
   };
 
   const handleMoveToFolder = async (snippetId: string, folderId: string) => {
-    console.log(`Moving snippet ${snippetId} to folder ${folderId}`);
     try {
-      // Delete existing snippet_folders entries for this snippet
       const { error: deleteError } = await supabase
         .from("snippet_folders")
         .delete()
         .eq("snippet_id", snippetId);
-      if (deleteError) {
-        console.error(
-          "Error deleting existing snippet folders:",
-          deleteError.message
-        );
-        return;
-      }
+      if (deleteError) return;
 
-      // Insert new snippet_folders entry
       const { error: insertError } = await supabase
         .from("snippet_folders")
         .insert({ snippet_id: snippetId, folder_id: folderId });
-      if (insertError) {
-        console.error("Error inserting snippet folder:", insertError.message);
-        return;
-      }
+      if (insertError) return;
 
-      // Update local state
       setSnippets((prev) =>
         prev.map((s) =>
           s.id === snippetId ? { ...s, folder_ids: [folderId] } : s
         )
       );
-    } catch (err) {
-      console.error("Unexpected error moving snippet:", err);
-    }
+    } catch {}
   };
 
   const handleLogout = async () => {
@@ -353,10 +297,8 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navbar */}
       <Navbar user={user} onLogout={handleLogout} />
       <div className="flex flex-col md:flex-row">
-        {/* Sidebar */}
         <Sidebar
           user={user}
           onViewChange={handleViewChange}
@@ -365,9 +307,7 @@ export default function Dashboard() {
           onSnippetClick={handleSnippetClick}
         />
 
-        {/* Main Content */}
         <div className="flex-1 flex flex-col md:flex-row pt-4 px-4 md:pt-4 md:px-8 gap-4">
-          {/* Snippet Card Column - Always visible on desktop, hidden on mobile when editor is active */}
           <div
             className={
               isMobile && selectedSnippetId
@@ -375,10 +315,8 @@ export default function Dashboard() {
                 : "w-full md:w-80 flex flex-col gap-4"
             }
           >
-            {/* Title */}
             <h2 className="text-2xl font-bold mb-4">Snippets</h2>
 
-            {/* Navigation Display and New Snippet Button */}
             <div className="flex justify-between items-center">
               <p className="text-base font-medium truncate mb-2">
                 {selectedView === "all"
@@ -399,10 +337,8 @@ export default function Dashboard() {
               </Button>
             </div>
 
-            {/* Divider */}
             <hr className="border-t border-muted my-2" />
 
-            {/* Snippet Cards */}
             <div className="flex-1 overflow-y-auto space-y-4">
               {filteredSnippets.length > 0 ? (
                 filteredSnippets.map((snippet) => (
@@ -413,8 +349,8 @@ export default function Dashboard() {
                     onClick={() => handleSnippetClick(snippet.id)}
                     onToggleFavorite={() => handleToggleFavorite(snippet.id)}
                     onDelete={handleDelete}
-                    onMoveToFolder={handleMoveToFolder} // Added prop
-                    folders={folders} // Added prop
+                    onMoveToFolder={handleMoveToFolder}
+                    folders={folders}
                   />
                 ))
               ) : (
@@ -425,13 +361,12 @@ export default function Dashboard() {
                     ? "No snippets in this folder."
                     : selectedView === "favorites"
                     ? "No favorites yet—star a snippet to add it here!"
-                    : "No shared snippets yet—check back later!"}
+                    : "Shared snippets will be listed here."}
                 </p>
               )}
             </div>
           </div>
 
-          {/* Editor - Desktop (Always Visible, Side-by-Side) */}
           {!isMobile && (
             <div className="flex-1">
               <SnippetEditor
@@ -444,7 +379,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Editor - Mobile (Modal) */}
           {isMobile && selectedSnippetId && (
             <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
               <SnippetEditor
