@@ -9,6 +9,12 @@ import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { defaultKeymap } from "@codemirror/commands";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
+import { cpp } from "@codemirror/lang-cpp";
+import { css } from "@codemirror/lang-css";
+import { html } from "@codemirror/lang-html";
+import { java } from "@codemirror/lang-java";
+import { rust } from "@codemirror/lang-rust";
+import { sql } from "@codemirror/lang-sql";
 import { oneDark } from "@codemirror/theme-one-dark";
 
 type Snippet = {
@@ -29,6 +35,23 @@ type SnippetEditorProps = {
   isMobile?: boolean;
 };
 
+// Define languages from schema
+const languages = [
+  "Bash",
+  "C",
+  "CPP",
+  "CSS",
+  "Go",
+  "HTML",
+  "Java",
+  "JavaScript",
+  "Python",
+  "Ruby",
+  "Rust",
+  "SQL",
+  "TypeScript",
+];
+
 export default function SnippetEditor({
   snippet,
   onSave,
@@ -36,13 +59,14 @@ export default function SnippetEditor({
   onNewSnippet,
   isMobile,
 }: SnippetEditorProps) {
-  const editorRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [title, setTitle] = useState(snippet.title);
   const [content, setContent] = useState(snippet.content);
   const [language, setLanguage] = useState(snippet.language);
-  const isMounted = useRef(false); // Track if editor has been initialized
+  const isMounted = useRef(false);
 
+  // Initialize CodeMirror editor
   useEffect(() => {
     if (!editorRef.current || isMounted.current) return;
 
@@ -50,15 +74,35 @@ export default function SnippetEditor({
     const languageMode = () => {
       switch (language.toLowerCase()) {
         case "javascript":
-          return javascript();
+        case "typescript":
+          return javascript({
+            typescript: language.toLowerCase() === "typescript",
+          });
         case "python":
           return python();
+        case "c":
+        case "cpp":
+          return cpp();
+        case "css":
+          return css();
+        case "html":
+          return html();
+        case "java":
+          return java();
+        case "rust":
+          return rust();
+        case "sql":
+          return sql();
+        case "bash":
+        case "go":
+        case "ruby":
+          return []; // No CodeMirror support
         default:
           return [];
       }
     };
 
-    // Detect theme (assuming a CSS class on the root element)
+    // Detect theme
     const isDarkMode = document.documentElement.classList.contains("dark");
 
     const state = EditorState.create({
@@ -89,22 +133,21 @@ export default function SnippetEditor({
       viewRef.current = null;
       isMounted.current = false;
     };
-  }, [language]); // Only reinitialize if language changes
+  }, [language]); // Only reinitialize on language change
 
+  // Sync snippet props with state
   useEffect(() => {
     setTitle(snippet.title);
     setLanguage(snippet.language);
-    if (snippet.content !== content) {
+    if (snippet.content !== content && viewRef.current) {
+      viewRef.current.dispatch({
+        changes: {
+          from: 0,
+          to: viewRef.current.state.doc.length,
+          insert: snippet.content,
+        },
+      });
       setContent(snippet.content);
-      if (viewRef.current) {
-        viewRef.current.dispatch({
-          changes: {
-            from: 0,
-            to: viewRef.current.state.doc.length,
-            insert: snippet.content,
-          },
-        });
-      }
     }
   }, [snippet]);
 
@@ -158,11 +201,14 @@ export default function SnippetEditor({
         <select
           value={language}
           onChange={(e) => setLanguage(e.target.value)}
-          className="p-2 rounded bg-muted text-foreground"
+          className="p-2 rounded bg-muted text-foreground hover:bg-accent focus:ring-accent"
         >
           <option value="">Select Language</option>
-          <option value="javascript">JavaScript</option>
-          <option value="python">Python</option>
+          {languages.map((lang) => (
+            <option key={lang} value={lang.toLowerCase()}>
+              {lang}
+            </option>
+          ))}
         </select>
 
         {/* CodeMirror Editor */}

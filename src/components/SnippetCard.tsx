@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react"; // Added missing imports
+import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
+import { faStar as faStarSolid } from "@fortawesome/free-solid-svg-icons";
+import { faStar as faStarRegular } from "@fortawesome/free-regular-svg-icons";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -79,7 +81,8 @@ export default function SnippetCard({
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold truncate">{snippet.title}</h3>
         <div className="flex items-center gap-3">
-          <span
+          <FontAwesomeIcon
+            icon={localFavorite ? faStarSolid : faStarRegular}
             className={`cursor-pointer text-xl ${
               localFavorite ? "text-yellow-400" : "text-gray-400"
             }`}
@@ -88,9 +91,7 @@ export default function SnippetCard({
               setLocalFavorite(!localFavorite);
               onToggleFavorite();
             }}
-          >
-            {localFavorite ? "★" : "☆"}
-          </span>
+          />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -142,7 +143,7 @@ export default function SnippetCard({
         </div>
       </div>
       <div className="mt-1">
-        <span className="text-sm px-2 py-1 rounded text-white font-bold">
+        <span className="text-sm px-2 py-1 rounded dark:text-white font-bold">
           {snippet.language}
         </span>
       </div>

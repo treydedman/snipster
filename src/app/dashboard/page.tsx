@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import SnippetCard from "@/components/SnippetCard";
@@ -87,7 +88,7 @@ export default function Dashboard() {
 
         const { data: snippetData, error: snippetError } = await supabase
           .from("snippets")
-          .select("id, title, content, language, tags")
+          .select("id, title, content, language, tags, is_favorite")
           .eq("owner", userId);
 
         if (snippetError) {
@@ -114,7 +115,7 @@ export default function Dashboard() {
               language: snippet.language.toLowerCase(),
               tags: snippet.tags,
               folder_ids: [],
-              isFavorite: false,
+              isFavorite: snippet.is_favorite,
             }))
           );
         } else {
@@ -129,7 +130,7 @@ export default function Dashboard() {
                   .filter((sf: any) => sf.snippet_id === snippet.id)
                   .map((sf: any) => sf.folder_id)
               : [],
-            isFavorite: false,
+            isFavorite: snippet.is_favorite,
           }));
           setSnippets(formattedSnippets);
           setFilteredSnippets(formattedSnippets);
@@ -143,6 +144,30 @@ export default function Dashboard() {
 
     fetchUserAndData();
   }, [router]);
+
+  // Real-time subscription for snippet updates
+  useEffect(() => {
+    const subscription = supabase
+      .channel("snippets")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "snippets" },
+        (payload) => {
+          setSnippets((prev) =>
+            prev.map((s) =>
+              s.id === payload.new.id
+                ? { ...s, isFavorite: payload.new.is_favorite }
+                : s
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -224,12 +249,44 @@ export default function Dashboard() {
     setSelectedSnippetId(null);
   };
 
-  const handleToggleFavorite = (snippetId: string) => {
+  const handleToggleFavorite = async (snippetId: string) => {
+    const snippet = snippets.find((s) => s.id === snippetId);
+    if (!snippet) return;
+
+    const newFavoriteStatus = !snippet.isFavorite;
+
+    // Optimistically update the UI
     setSnippets((prev) =>
       prev.map((s) =>
-        s.id === snippetId ? { ...s, isFavorite: !s.isFavorite } : s
+        s.id === snippetId ? { ...s, isFavorite: newFavoriteStatus } : s
       )
     );
+
+    try {
+      const { error } = await supabase
+        .from("snippets")
+        .update({ is_favorite: newFavoriteStatus })
+        .eq("id", snippetId)
+        .eq("owner", user?.id);
+
+      if (error) {
+        throw new Error(error.message || "Failed to update favorite status");
+      }
+
+      toast.success(
+        newFavoriteStatus
+          ? "Snippet added to favorites!"
+          : "Snippet removed from favorites."
+      );
+    } catch (error) {
+      // Revert on error
+      setSnippets((prev) =>
+        prev.map((s) =>
+          s.id === snippetId ? { ...s, isFavorite: !newFavoriteStatus } : s
+        )
+      );
+      toast.error("Failed to update favorite status.");
+    }
   };
 
   const handleDelete = async (snippetId: string) => {
@@ -238,19 +295,21 @@ export default function Dashboard() {
         .from("snippets")
         .delete()
         .eq("id", snippetId);
-      if (snippetError) return;
+      if (snippetError) throw snippetError;
 
       const { error: folderError } = await supabase
         .from("snippet_folders")
         .delete()
         .eq("snippet_id", snippetId);
-      if (folderError) return;
+      if (folderError) throw folderError;
 
       setSnippets((prev) => prev.filter((s) => s.id !== snippetId));
       if (selectedSnippetId === snippetId) {
         setSelectedSnippetId(null);
       }
-    } catch {}
+    } catch (error) {
+      toast.error("Failed to delete snippet.");
+    }
   };
 
   const handleMoveToFolder = async (snippetId: string, folderId: string) => {
@@ -259,19 +318,22 @@ export default function Dashboard() {
         .from("snippet_folders")
         .delete()
         .eq("snippet_id", snippetId);
-      if (deleteError) return;
+      if (deleteError) throw deleteError;
 
       const { error: insertError } = await supabase
         .from("snippet_folders")
         .insert({ snippet_id: snippetId, folder_id: folderId });
-      if (insertError) return;
+      if (insertError) throw insertError;
 
       setSnippets((prev) =>
         prev.map((s) =>
           s.id === snippetId ? { ...s, folder_ids: [folderId] } : s
         )
       );
-    } catch {}
+      toast.success("Snippet moved to folder.");
+    } catch (error) {
+      toast.error("Failed to move snippet to folder.");
+    }
   };
 
   const handleLogout = async () => {

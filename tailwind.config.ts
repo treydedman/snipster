@@ -24,7 +24,7 @@ const config: ExtendedConfig = {
     extend: {
       colors: {
         cyan: {
-          500: "#06b6d4",
+          500: "#6b7280",
         },
         blue: {
           600: "#2563EB", // Logo gradient bottom, primary color

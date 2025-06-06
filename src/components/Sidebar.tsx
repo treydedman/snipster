@@ -149,9 +149,9 @@ export default function Sidebar({
     }
   };
 
-  const favoriteSnippets = filteredSnippets.filter(
-    (snippet) => snippet.isFavorite
-  );
+  const favoriteSnippets = filteredSnippets
+    .filter((snippet) => snippet.isFavorite)
+    .sort((a, b) => a.title.localeCompare(b.title));
 
   return (
     <div className="w-full md:w-64 flex-none bg-card p-4 border-r border-zinc-100 dark:border-none">
