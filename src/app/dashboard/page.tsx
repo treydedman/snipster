@@ -25,6 +25,10 @@ type Folder = {
   name: string;
 };
 
+type FolderWithCount = Folder & {
+  snippetCount: number;
+};
+
 type ViewType = "all" | "folder" | "favorites" | "shared";
 
 export default function Dashboard() {
@@ -36,7 +40,7 @@ export default function Dashboard() {
   } | null>(null);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [filteredSnippets, setFilteredSnippets] = useState<Snippet[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([]);
+  const [folders, setFolders] = useState<FolderWithCount[]>([]);
   const [selectedView, setSelectedView] = useState<ViewType>("all");
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedSnippetId, setSelectedSnippetId] = useState<string | null>(
@@ -53,7 +57,6 @@ export default function Dashboard() {
           data: { session },
           error: sessionError,
         } = await supabase.auth.getSession();
-
         if (sessionError) {
           setError("Failed to authenticate");
           setLoading(false);
@@ -83,7 +86,16 @@ export default function Dashboard() {
         if (folderError) {
           setFolders([]);
         } else {
-          setFolders(folderData || []);
+          const foldersWithCounts = await Promise.all(
+            (folderData as Folder[]).map(async (folder) => {
+              const { count } = await supabase
+                .from("snippet_folders")
+                .select("snippet_id", { count: "exact" })
+                .eq("folder_id", folder.id);
+              return { ...folder, snippetCount: count || 0 };
+            })
+          );
+          setFolders(foldersWithCounts);
         }
 
         const { data: snippetData, error: snippetError } = await supabase
@@ -126,10 +138,8 @@ export default function Dashboard() {
             language: snippet.language.toLowerCase(),
             tags: snippet.tags,
             folder_ids: snippetFoldersData
-              ? snippetFoldersData
-                  .filter((sf: any) => sf.snippet_id === snippet.id)
-                  .map((sf: any) => sf.folder_id)
-              : [],
+              .filter((sf: any) => sf.snippet_id === snippet.id)
+              .map((sf: any) => sf.folder_id),
             isFavorite: snippet.is_favorite,
           }));
           setSnippets(formattedSnippets);
@@ -145,7 +155,6 @@ export default function Dashboard() {
     fetchUserAndData();
   }, [router]);
 
-  // Real-time subscription for snippet updates
   useEffect(() => {
     const subscription = supabase
       .channel("snippets")
@@ -254,8 +263,6 @@ export default function Dashboard() {
     if (!snippet) return;
 
     const newFavoriteStatus = !snippet.isFavorite;
-
-    // Optimistically update the UI
     setSnippets((prev) =>
       prev.map((s) =>
         s.id === snippetId ? { ...s, isFavorite: newFavoriteStatus } : s
@@ -268,18 +275,14 @@ export default function Dashboard() {
         .update({ is_favorite: newFavoriteStatus })
         .eq("id", snippetId)
         .eq("owner", user?.id);
-
-      if (error) {
+      if (error)
         throw new Error(error.message || "Failed to update favorite status");
-      }
-
       toast.success(
         newFavoriteStatus
           ? "Snippet added to favorites!"
           : "Snippet removed from favorites."
       );
-    } catch (error) {
-      // Revert on error
+    } catch {
       setSnippets((prev) =>
         prev.map((s) =>
           s.id === snippetId ? { ...s, isFavorite: !newFavoriteStatus } : s
@@ -296,18 +299,14 @@ export default function Dashboard() {
         .delete()
         .eq("id", snippetId);
       if (snippetError) throw snippetError;
-
       const { error: folderError } = await supabase
         .from("snippet_folders")
         .delete()
         .eq("snippet_id", snippetId);
       if (folderError) throw folderError;
-
       setSnippets((prev) => prev.filter((s) => s.id !== snippetId));
-      if (selectedSnippetId === snippetId) {
-        setSelectedSnippetId(null);
-      }
-    } catch (error) {
+      if (selectedSnippetId === snippetId) setSelectedSnippetId(null);
+    } catch {
       toast.error("Failed to delete snippet.");
     }
   };
@@ -319,19 +318,17 @@ export default function Dashboard() {
         .delete()
         .eq("snippet_id", snippetId);
       if (deleteError) throw deleteError;
-
       const { error: insertError } = await supabase
         .from("snippet_folders")
         .insert({ snippet_id: snippetId, folder_id: folderId });
       if (insertError) throw insertError;
-
       setSnippets((prev) =>
         prev.map((s) =>
           s.id === snippetId ? { ...s, folder_ids: [folderId] } : s
         )
       );
       toast.success("Snippet moved to folder.");
-    } catch (error) {
+    } catch {
       toast.error("Failed to move snippet to folder.");
     }
   };
@@ -340,6 +337,11 @@ export default function Dashboard() {
     await supabase.auth.signOut();
     router.push("/auth/sign-in");
   };
+
+  const foldersForSnippetCard: Folder[] = folders.map(({ id, name }) => ({
+    id,
+    name,
+  }));
 
   if (loading) {
     return (
@@ -368,7 +370,6 @@ export default function Dashboard() {
           filteredSnippets={filteredSnippets}
           onSnippetClick={handleSnippetClick}
         />
-
         <div className="flex-1 flex flex-col md:flex-row pt-4 px-4 md:pt-4 md:px-8 gap-4">
           <div
             className={
@@ -378,7 +379,6 @@ export default function Dashboard() {
             }
           >
             <h2 className="text-2xl font-bold mb-4">Snippets</h2>
-
             <div className="flex justify-between items-center">
               <p className="text-base font-medium truncate mb-2">
                 {selectedView === "all"
@@ -398,9 +398,7 @@ export default function Dashboard() {
                 New Snippet
               </Button>
             </div>
-
             <hr className="border-t border-muted my-2" />
-
             <div className="flex-1 overflow-y-auto space-y-4">
               {filteredSnippets.length > 0 ? (
                 filteredSnippets.map((snippet) => (
@@ -412,7 +410,7 @@ export default function Dashboard() {
                     onToggleFavorite={() => handleToggleFavorite(snippet.id)}
                     onDelete={handleDelete}
                     onMoveToFolder={handleMoveToFolder}
-                    folders={folders}
+                    folders={foldersForSnippetCard}
                   />
                 ))
               ) : (
@@ -428,7 +426,6 @@ export default function Dashboard() {
               )}
             </div>
           </div>
-
           {!isMobile && (
             <div className="flex-1">
               <SnippetEditor
@@ -440,7 +437,6 @@ export default function Dashboard() {
               />
             </div>
           )}
-
           {isMobile && selectedSnippetId && (
             <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
               <SnippetEditor
