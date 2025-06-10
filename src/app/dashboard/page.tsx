@@ -280,7 +280,7 @@ export default function Dashboard() {
       toast.success(
         newFavoriteStatus
           ? "Snippet added to favorites!"
-          : "Snippet removed from favorites."
+          : "Snippet removed from favorites!"
       );
     } catch {
       setSnippets((prev) =>
@@ -288,7 +288,7 @@ export default function Dashboard() {
           s.id === snippetId ? { ...s, isFavorite: !newFavoriteStatus } : s
         )
       );
-      toast.error("Failed to update favorite status.");
+      toast.error("Failed to update favorite status!");
     }
   };
 
@@ -306,30 +306,97 @@ export default function Dashboard() {
       if (folderError) throw folderError;
       setSnippets((prev) => prev.filter((s) => s.id !== snippetId));
       if (selectedSnippetId === snippetId) setSelectedSnippetId(null);
+      toast.success("Snippet deleted successfully!");
     } catch {
-      toast.error("Failed to delete snippet.");
+      toast.error("Failed to delete snippet!");
     }
   };
 
-  const handleMoveToFolder = async (snippetId: string, folderId: string) => {
+  const handleMoveToFolder = async (
+    snippetId: string,
+    folderId: string | null,
+    updateSidebarFolders?: (folders: FolderWithCount[]) => void
+  ) => {
+    const snippet = snippets.find((s) => s.id === snippetId);
+    if (!snippet) {
+      toast.error("Snippet not found!");
+      return;
+    }
+    const oldFolderId = snippet.folder_ids[0] || null;
+
     try {
+      // Check for existing folder assignment
+      const { data: existingFolder, error: checkError } = await supabase
+        .from("snippet_folders")
+        .select("folder_id")
+        .eq("snippet_id", snippetId)
+        .maybeSingle();
+      if (checkError) {
+        throw checkError;
+      }
+      if (existingFolder && existingFolder.folder_id === folderId) {
+        toast.info("Snippet is already in this folder!");
+        return;
+      }
+
+      // Delete existing folder assignment
       const { error: deleteError } = await supabase
         .from("snippet_folders")
         .delete()
         .eq("snippet_id", snippetId);
-      if (deleteError) throw deleteError;
-      const { error: insertError } = await supabase
-        .from("snippet_folders")
-        .insert({ snippet_id: snippetId, folder_id: folderId });
-      if (insertError) throw insertError;
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      // Insert new folder assignment
+      if (folderId) {
+        const { error: insertError } = await supabase
+          .from("snippet_folders")
+          .insert({ snippet_id: snippetId, folder_id: folderId });
+        if (insertError) {
+          throw insertError;
+        }
+      }
+
+      // Update Dashboard state
       setSnippets((prev) =>
         prev.map((s) =>
-          s.id === snippetId ? { ...s, folder_ids: [folderId] } : s
+          s.id === snippetId
+            ? { ...s, folder_ids: folderId ? [folderId] : [] }
+            : s
         )
       );
-      toast.success("Snippet moved to folder.");
-    } catch {
-      toast.error("Failed to move snippet to folder.");
+      setFolders((prev) => {
+        const newFolders = prev.map((f) =>
+          f.id === oldFolderId && oldFolderId !== folderId
+            ? { ...f, snippetCount: Math.max(0, f.snippetCount - 1) }
+            : f.id === folderId && folderId
+            ? { ...f, snippetCount: f.snippetCount + 1 }
+            : f
+        );
+        return newFolders;
+      });
+
+      // Update Sidebar state
+      if (updateSidebarFolders) {
+        updateSidebarFolders(
+          folders.map((f) =>
+            f.id === oldFolderId && oldFolderId !== folderId
+              ? { ...f, snippetCount: Math.max(0, f.snippetCount - 1) }
+              : f.id === folderId && folderId
+              ? { ...f, snippetCount: f.snippetCount + 1 }
+              : f
+          )
+        );
+      }
+
+      toast.success(
+        folderId ? "Snippet moved to folder!" : "Snippet removed from folder!"
+      );
+    } catch (error: any) {
+      toast.error(
+        `Failed to move snippet: ${error.message || "Unknown error"}`
+      );
     }
   };
 
@@ -369,6 +436,8 @@ export default function Dashboard() {
           onSearch={handleSearch}
           filteredSnippets={filteredSnippets}
           onSnippetClick={handleSnippetClick}
+          setFolders={setFolders}
+          folders={folders}
         />
         <div className="flex-1 flex flex-col md:flex-row pt-4 px-4 md:pt-4 md:px-8 gap-4">
           <div
@@ -409,7 +478,9 @@ export default function Dashboard() {
                     onClick={() => handleSnippetClick(snippet.id)}
                     onToggleFavorite={() => handleToggleFavorite(snippet.id)}
                     onDelete={handleDelete}
-                    onMoveToFolder={handleMoveToFolder}
+                    onMoveToFolder={(snippetId, folderId) => {
+                      handleMoveToFolder(snippetId, folderId, setFolders);
+                    }}
                     folders={foldersForSnippetCard}
                   />
                 ))

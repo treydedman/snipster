@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { Inter, Fira_Code } from "next/font/google";
+import { Toaster } from "sonner";
 import "@/app/globals.css";
 
 const inter = Inter({
@@ -30,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className={`${inter.variable} ${firaCode.variable}`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -38,6 +39,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <Toaster
+            richColors
+            position="top-right"
+            toastOptions={{ duration: 5000 }}
+          />
         </ThemeProvider>
       </body>
     </html>

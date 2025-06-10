@@ -35,7 +35,7 @@ type SnippetCardProps = {
   onClick: () => void;
   onToggleFavorite: () => void;
   onDelete: (snippetId: string) => void;
-  onMoveToFolder: (snippetId: string, folderId: string) => void;
+  onMoveToFolder: (snippetId: string, folderId: string | null) => void;
   folders: Folder[];
 };
 
@@ -64,7 +64,7 @@ export default function SnippetCard({
     onDelete(snippet.id);
   };
 
-  const handleMoveToFolder = (e: React.MouseEvent, folderId: string) => {
+  const handleMoveToFolder = (e: React.MouseEvent, folderId: string | null) => {
     e.stopPropagation();
     onMoveToFolder(snippet.id, folderId);
   };
@@ -115,12 +115,22 @@ export default function SnippetCard({
                   Move to Folder
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="max-h-48 overflow-y-auto">
+                  <DropdownMenuItem
+                    onClick={(e) => handleMoveToFolder(e, null)}
+                    className="hover:cursor-pointer"
+                  >
+                    Remove from Folder
+                  </DropdownMenuItem>
                   {folders.length > 0 ? (
                     folders.map((folder) => (
                       <DropdownMenuItem
                         key={folder.id}
                         onClick={(e) => handleMoveToFolder(e, folder.id)}
-                        className="hover:cursor-pointer"
+                        className={`hover:cursor-pointer ${
+                          snippet.folder_ids.includes(folder.id)
+                            ? "font-bold"
+                            : ""
+                        }`}
                       >
                         {folder.name}
                       </DropdownMenuItem>

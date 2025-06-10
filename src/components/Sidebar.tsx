@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -48,6 +49,8 @@ type SidebarProps = {
   onSearch: (query: string) => void;
   filteredSnippets: Snippet[];
   onSnippetClick: (snippetId: string) => void;
+  setFolders: (folders: FolderWithCount[]) => void;
+  folders: FolderWithCount[];
 };
 
 export default function Sidebar({
@@ -56,41 +59,44 @@ export default function Sidebar({
   onSearch,
   filteredSnippets,
   onSnippetClick,
+  setFolders,
+  folders,
 }: SidebarProps) {
-  const [folders, setFolders] = useState<FolderWithCount[]>([]);
   const [currentView, setCurrentView] = useState<ViewType>("all");
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddFolderOpen, setIsAddFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchFolders = async () => {
       const { data: userData } = await supabase.auth.getSession();
-      const userId = userData?.session?.user?.id;
-      if (!userId) return;
+      const currentUserId = userData?.session?.user?.id;
+      if (!currentUserId) {
+        return;
+      }
+
+      setUserId(currentUserId);
 
       const { data: folderData, error: folderError } = await supabase
         .from("folders")
         .select("id, name")
-        .eq("owner", userId);
+        .eq("owner", currentUserId);
 
       if (folderError) {
-        toast.error("Failed to fetch folders.");
+        toast.error("Failed to fetch folders!");
+        setFolders([]);
         return;
       }
 
       const foldersWithCounts = await Promise.all(
         (folderData as Folder[]).map(async (folder) => {
-          const { count, error } = await supabase
+          const { count, error: countError } = await supabase
             .from("snippet_folders")
             .select("snippet_id", { count: "exact" })
             .eq("folder_id", folder.id);
-          if (error) {
-            console.error(
-              `Error counting snippets for folder ${folder.id}:`,
-              error
-            );
+          if (countError) {
             return { ...folder, snippetCount: 0 };
           }
           return { ...folder, snippetCount: count || 0 };
@@ -101,24 +107,44 @@ export default function Sidebar({
     };
 
     fetchFolders();
-    const folderChannel = supabase
-      .channel("folders")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "folders" },
-        () => fetchFolders()
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "snippet_folders" },
-        () => fetchFolders()
-      )
-      .subscribe();
 
-    return () => {
-      supabase.removeChannel(folderChannel);
-    };
-  }, []);
+    if (userId) {
+      const folderChannel = supabase
+        .channel(`folders_${userId}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "folders" },
+          (payload) => {
+            fetchFolders();
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "snippet_folders" },
+          (payload) => {
+            fetchFolders();
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "snippet_folders" },
+          (payload) => {
+            fetchFolders();
+          }
+        )
+        .subscribe((status, error) => {
+          if (error) {
+            toast.error("Failed to subscribe to folder updates!", {
+              duration: 5000,
+            });
+          }
+        });
+
+      return () => {
+        supabase.removeChannel(folderChannel);
+      };
+    }
+  }, [userId, setFolders]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -135,14 +161,14 @@ export default function Sidebar({
 
   const handleAddFolder = async () => {
     if (!newFolderName.trim()) {
-      toast.error("Folder name cannot be empty.");
+      toast.error("Folder name cannot be empty!");
       return;
     }
 
     const { data: userData } = await supabase.auth.getSession();
     const userId = userData?.session?.user?.id;
     if (!userId) {
-      toast.error("No user logged in.");
+      toast.error("No user logged in!");
       return;
     }
 
@@ -153,15 +179,16 @@ export default function Sidebar({
         .select("id, name")
         .single();
       if (error) {
-        toast.error(error.message || "Failed to create folder.");
+        toast.error(error.message || "Failed to create folder!");
         return;
       }
-      setFolders([...folders, { ...newFolder, snippetCount: 0 }]);
+      const updatedFolders = [...folders, { ...newFolder, snippetCount: 0 }];
+      setFolders(updatedFolders);
       setNewFolderName("");
       setIsAddFolderOpen(false);
-      toast.success("Folder created successfully.");
+      toast.success("Folder created successfully!");
     } catch {
-      toast.error("An unexpected error occurred.");
+      toast.error("An unexpected error occurred!");
     }
   };
 
@@ -193,7 +220,7 @@ export default function Sidebar({
         className={`w-full text-left p-2 rounded flex items-center gap-2 cursor-pointer ${
           currentView === "all" && !currentFolderId
             ? "bg-primary text-primary-foreground"
-            : "text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-700"
+            : "text-foreground hover:bg-accent"
         }`}
       >
         <FontAwesomeIcon icon={faCode} />
@@ -215,6 +242,9 @@ export default function Sidebar({
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create New Folder</DialogTitle>
+                <DialogDescription>
+                  Enter a name for your new folder.
+                </DialogDescription>
               </DialogHeader>
               <Input
                 type="text"
@@ -246,7 +276,7 @@ export default function Sidebar({
             className={`w-full text-left p-2 rounded flex items-center gap-2 cursor-pointer ${
               currentView === "folder" && currentFolderId === folder.id
                 ? "bg-primary text-primary-foreground"
-                : "text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                : "text-foreground hover:bg-accent"
             }`}
           >
             <FontAwesomeIcon
@@ -269,7 +299,7 @@ export default function Sidebar({
           className={`w-full text-left p-2 border-b border-muted dark:border-zinc-600 flex items-center gap-2 cursor-pointer ${
             currentView === "favorites" && !currentFolderId
               ? "bg-primary text-primary-foreground"
-              : "text-foreground"
+              : "text-foreground hover:bg-accent"
           }`}
         >
           <FontAwesomeIcon icon={faStar} />
@@ -280,7 +310,7 @@ export default function Sidebar({
           favoriteSnippets.map((snippet) => (
             <div
               key={snippet.id}
-              className="text-foreground p-2 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded cursor-pointer"
+              className="text-foreground p-2 hover:bg-accent rounded cursor-pointer"
               onClick={() => onSnippetClick(snippet.id)}
             >
               {snippet.title}
@@ -299,7 +329,7 @@ export default function Sidebar({
           className={`w-full text-left p-2 border-b border-muted dark:border-zinc-600 flex items-center gap-2 cursor-pointer ${
             currentView === "shared" && !currentFolderId
               ? "bg-primary text-primary-foreground"
-              : "text-foreground"
+              : "text-foreground hover:bg-accent"
           }`}
         >
           <FontAwesomeIcon icon={faShareNodes} />
