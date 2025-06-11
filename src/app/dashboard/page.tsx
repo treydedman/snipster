@@ -461,7 +461,7 @@ export default function Dashboard() {
                   : "Shared Snippets"}
               </p>
               <Button
-                className="bg-primary text-primary-foreground hover:bg-blue-700"
+                className="bg-primary text-primary-foreground hover:bg-blue-700 cursor-pointer"
                 onClick={() => setSelectedSnippetId(null)}
               >
                 New Snippet
@@ -503,7 +503,6 @@ export default function Dashboard() {
                 snippet={selectedSnippet}
                 onSave={handleEditorSave}
                 onCancel={handleEditorCancel}
-                onNewSnippet={() => setSelectedSnippetId(null)}
                 isMobile={false}
               />
             </div>
@@ -514,7 +513,6 @@ export default function Dashboard() {
                 snippet={selectedSnippet}
                 onSave={handleEditorSave}
                 onCancel={handleEditorCancel}
-                onNewSnippet={() => setSelectedSnippetId(null)}
                 isMobile={true}
               />
             </div>

@@ -31,7 +31,6 @@ type SnippetEditorProps = {
   snippet: Snippet;
   onSave: (updatedSnippet: Snippet) => void;
   onCancel: () => void;
-  onNewSnippet: () => void;
   isMobile?: boolean;
 };
 
@@ -56,7 +55,6 @@ export default function SnippetEditor({
   snippet,
   onSave,
   onCancel,
-  onNewSnippet,
   isMobile,
 }: SnippetEditorProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -96,7 +94,7 @@ export default function SnippetEditor({
         case "bash":
         case "go":
         case "ruby":
-          return []; // No CodeMirror support
+          return [];
         default:
           return [];
       }
@@ -172,12 +170,6 @@ export default function SnippetEditor({
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Editor</h2>
-        <Button
-          onClick={onNewSnippet}
-          className="bg-primary text-primary-foreground hover:bg-blue-700"
-        >
-          New Snippet
-        </Button>
       </div>
 
       {isMobile && (
@@ -221,11 +213,15 @@ export default function SnippetEditor({
         <div className="flex gap-2">
           <Button
             onClick={handleSave}
-            className="bg-primary text-primary-foreground"
+            className="bg-primary text-primary-foreground hover:bg-blue-700 cursor-pointer"
           >
             Save
           </Button>
-          <Button onClick={onCancel} variant="outline">
+          <Button
+            onClick={onCancel}
+            variant="outline"
+            className="cursor-pointer"
+          >
             Cancel
           </Button>
         </div>

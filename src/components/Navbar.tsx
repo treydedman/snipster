@@ -66,10 +66,10 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                 <img
                   src={user.avatar_url}
                   alt={`${user.username}'s avatar`}
-                  className="w-8 h-8 rounded-full object-cover"
+                  className="w-8 h-8 rounded-full object-cover avatar"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-white text-sm">
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-white text-sm avatar avatar-initials">
                   {getInitials(user.username)}
                 </div>
               )}

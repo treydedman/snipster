@@ -139,16 +139,29 @@
 /* Folder action buttons */
 .folder-edit-btn,
 .folder-delete-btn {
-  font-size: 0.75rem; /* Smaller icon size */
-  background-color: transparent !important; /* No background */
+  font-size: 0.75rem;
+  background-color: transparent !important;
 }
 
 .folder-edit-btn:hover {
-  color: var(--primary) !important; /* Blue branding color */
-  background-color: transparent !important; /* No background on hover */
+  color: var(--primary) !important;
+  background-color: transparent !important;
 }
 
 .folder-delete-btn:hover {
-  color: var(--destructive) !important; /* Red destructive color */
-  background-color: transparent !important; /* No background on hover */
+  color: var(--destructive) !important;
+  background-color: transparent !important;
+}
+
+/* Navbar avatar styles */
+.avatar-initials {
+  background-color: #d4d4d8;
+}
+
+.dark .avatar-initials {
+  background-color: var(--muted);
+}
+
+.dark .avatar {
+  border: 1px solid #3f3f46;
 }
