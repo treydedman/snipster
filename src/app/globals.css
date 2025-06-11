@@ -120,3 +120,35 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Sonner toast styles for dark mode */
+.dark [data-sonner-toast],
+.dark .sonner-toast,
+.dark .sonner-toast-success,
+.dark .sonner-toast-error,
+.dark .sonner-toast-info,
+.dark .sonner-toast-warning {
+  background-color: #1f2937 !important;
+  color: #f3f4f6 !important;
+  border: 1px solid #4b5563 !important;
+  border-radius: 0.375rem !important;
+  padding: 1rem !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Folder action buttons */
+.folder-edit-btn,
+.folder-delete-btn {
+  font-size: 0.75rem; /* Smaller icon size */
+  background-color: transparent !important; /* No background */
+}
+
+.folder-edit-btn:hover {
+  color: var(--primary) !important; /* Blue branding color */
+  background-color: transparent !important; /* No background on hover */
+}
+
+.folder-delete-btn:hover {
+  color: var(--destructive) !important; /* Red destructive color */
+  background-color: transparent !important; /* No background on hover */
+}

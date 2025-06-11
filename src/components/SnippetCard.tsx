@@ -1,9 +1,20 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEllipsisV } from "@fortawesome/free-solid-svg-icons";
 import { faStar as faStarSolid } from "@fortawesome/free-solid-svg-icons";
 import { faStar as faStarRegular } from "@fortawesome/free-regular-svg-icons";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,6 +60,7 @@ export default function SnippetCard({
   folders,
 }: SnippetCardProps) {
   const [localFavorite, setLocalFavorite] = useState(snippet.isFavorite);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     setLocalFavorite(snippet.isFavorite);
@@ -62,6 +74,7 @@ export default function SnippetCard({
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete(snippet.id);
+    setIsDeleteDialogOpen(false);
   };
 
   const handleMoveToFolder = (e: React.MouseEvent, folderId: string | null) => {
@@ -142,12 +155,39 @@ export default function SnippetCard({
                   )}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
-              <DropdownMenuItem
-                onClick={handleDelete}
-                className="text-red-500 hover:cursor-pointer"
+              <Dialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
               >
-                Delete
-              </DropdownMenuItem>
+                <DialogTrigger asChild>
+                  <DropdownMenuItem
+                    onSelect={(e) => e.preventDefault()}
+                    className="text-red-500 hover:cursor-pointer"
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Delete Snippet</DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to delete "{snippet.title}"? This
+                      action cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter className="mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDeleteDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button variant="destructive" onClick={handleDelete}>
+                      Delete
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
