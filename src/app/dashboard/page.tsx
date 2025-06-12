@@ -50,6 +50,23 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Valid languages (match Supabase language_type enum)
+  const validLanguages = [
+    "bash",
+    "c",
+    "cpp",
+    "css",
+    "go",
+    "html",
+    "java",
+    "javascript",
+    "python",
+    "ruby",
+    "rust",
+    "sql",
+    "typescript",
+  ];
+
   useEffect(() => {
     const fetchUserAndData = async () => {
       try {
@@ -171,10 +188,52 @@ export default function Dashboard() {
           );
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "snippets" },
+        (payload) => {
+          const newSnippet = {
+            id: payload.new.id,
+            title: payload.new.title,
+            content: payload.new.content,
+            language: payload.new.language.toLowerCase(),
+            tags: payload.new.tags || [],
+            folder_ids: [],
+            isFavorite: payload.new.is_favorite,
+          };
+          setSnippets((prev) => [...prev, newSnippet]);
+          setFilteredSnippets((prev) => [...prev, newSnippet]);
+        }
+      )
+      .subscribe();
+
+    const folderSubscription = supabase
+      .channel("snippet_folders")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "snippet_folders" },
+        (payload) => {
+          setSnippets((prev) =>
+            prev.map((s) =>
+              s.id === payload.new.snippet_id
+                ? { ...s, folder_ids: [...s.folder_ids, payload.new.folder_id] }
+                : s
+            )
+          );
+          setFolders((prev) =>
+            prev.map((f) =>
+              f.id === payload.new.folder_id
+                ? { ...f, snippetCount: f.snippetCount + 1 }
+                : f
+            )
+          );
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(subscription);
+      supabase.removeChannel(folderSubscription);
     };
   }, []);
 
@@ -248,10 +307,120 @@ export default function Dashboard() {
     setSelectedSnippetId(snippetId);
   };
 
-  const handleEditorSave = (updatedSnippet: Snippet) => {
-    setSnippets((prev) =>
-      prev.map((s) => (s.id === updatedSnippet.id ? updatedSnippet : s))
-    );
+  const handleEditorSave = async (updatedSnippet: Snippet) => {
+    if (!user) {
+      toast.error("User not authenticated!");
+      return;
+    }
+
+    // Validate snippet
+    if (!updatedSnippet.title.trim()) {
+      toast.error("Snippet title is required!");
+      return;
+    }
+    if (!updatedSnippet.content.trim()) {
+      toast.error("Snippet content is required!");
+      return;
+    }
+    if (!updatedSnippet.language) {
+      toast.error("Snippet language is required!");
+      return;
+    }
+    if (!validLanguages.includes(updatedSnippet.language)) {
+      toast.error(`Invalid language: ${updatedSnippet.language}`);
+      return;
+    }
+
+    try {
+      if (updatedSnippet.id === "") {
+        // New snippet
+        const { data, error } = await supabase
+          .from("snippets")
+          .insert({
+            title: updatedSnippet.title,
+            content: updatedSnippet.content,
+            language: updatedSnippet.language,
+            tags: updatedSnippet.tags,
+            is_favorite: updatedSnippet.isFavorite,
+            owner: user.id,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          throw new Error(error.message || "Failed to save snippet");
+        }
+
+        const newSnippet = {
+          id: data.id,
+          title: data.title,
+          content: data.content,
+          language: data.language.toLowerCase(),
+          tags: data.tags || [],
+          folder_ids: [],
+          isFavorite: data.is_favorite,
+        };
+
+        // Assign to folder if selected
+        if (selectedFolderId) {
+          const { error: folderError } = await supabase
+            .from("snippet_folders")
+            .insert({
+              snippet_id: data.id,
+              folder_id: selectedFolderId,
+            });
+
+          if (folderError) {
+            throw new Error(folderError.message || "Failed to assign folder");
+          }
+          newSnippet.folder_ids = [selectedFolderId];
+        }
+
+        // Update state
+        setSnippets((prev) => [...prev, newSnippet]);
+        setFilteredSnippets((prev) => [...prev, newSnippet]);
+        if (selectedFolderId) {
+          setFolders((prev) =>
+            prev.map((f) =>
+              f.id === selectedFolderId
+                ? { ...f, snippetCount: f.snippetCount + 1 }
+                : f
+            )
+          );
+        }
+
+        toast.success("Snippet created successfully!");
+      } else {
+        // Existing snippet
+        const { error } = await supabase
+          .from("snippets")
+          .update({
+            title: updatedSnippet.title,
+            content: updatedSnippet.content,
+            language: updatedSnippet.language,
+            tags: updatedSnippet.tags,
+          })
+          .eq("id", updatedSnippet.id)
+          .eq("owner", user.id);
+
+        if (error) {
+          throw new Error(error.message || "Failed to update snippet");
+        }
+
+        setSnippets((prev) =>
+          prev.map((s) => (s.id === updatedSnippet.id ? updatedSnippet : s))
+        );
+        toast.success("Snippet updated successfully!");
+      }
+
+      // Close editor
+      setSelectedSnippetId(null);
+    } catch (error: any) {
+      console.error("Save error:", error);
+      toast.error(
+        `Failed to save snippet: ${error.message || "Unknown error"}`
+      );
+    }
   };
 
   const handleEditorCancel = () => {

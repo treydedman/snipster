@@ -34,21 +34,21 @@ type SnippetEditorProps = {
   isMobile?: boolean;
 };
 
-// Define languages from schema
+// Match Supabase language_type enum (lowercase)
 const languages = [
-  "Bash",
-  "C",
-  "CPP",
-  "CSS",
-  "Go",
-  "HTML",
-  "Java",
-  "JavaScript",
-  "Python",
-  "Ruby",
-  "Rust",
-  "SQL",
-  "TypeScript",
+  "bash",
+  "c",
+  "cpp",
+  "css",
+  "go",
+  "html",
+  "java",
+  "javascript",
+  "python",
+  "ruby",
+  "rust",
+  "sql",
+  "typescript",
 ];
 
 export default function SnippetEditor({
@@ -197,8 +197,8 @@ export default function SnippetEditor({
         >
           <option value="">Select Language</option>
           {languages.map((lang) => (
-            <option key={lang} value={lang.toLowerCase()}>
-              {lang}
+            <option key={lang} value={lang}>
+              {lang.charAt(0).toUpperCase() + lang.slice(1)}
             </option>
           ))}
         </select>
@@ -214,6 +214,7 @@ export default function SnippetEditor({
           <Button
             onClick={handleSave}
             className="bg-primary text-primary-foreground hover:bg-blue-700 cursor-pointer"
+            disabled={!title.trim() || !content.trim() || !language}
           >
             Save
           </Button>
