@@ -10,6 +10,7 @@ import Sidebar from "@/components/Sidebar";
 import SnippetCard from "@/components/SnippetCard";
 import SnippetEditor from "@/components/SnippetEditor";
 
+// Define Snippet type to match Supabase snippets table
 type Snippet = {
   id: string;
   title: string;
@@ -18,6 +19,17 @@ type Snippet = {
   tags: string[];
   folder_ids: string[];
   isFavorite: boolean;
+};
+
+// Supabase snippets table type (for query results)
+type SnippetTable = {
+  id: string;
+  title: string;
+  content: string;
+  language: string;
+  tags: string[] | null;
+  is_favorite: boolean;
+  owner: string;
 };
 
 type Folder = {
@@ -141,8 +153,8 @@ export default function Dashboard() {
               id: snippet.id,
               title: snippet.title,
               content: snippet.content,
-              language: snippet.language.toLowerCase(),
-              tags: snippet.tags,
+              language: snippet.language?.toLowerCase() || "",
+              tags: snippet.tags || [],
               folder_ids: [],
               isFavorite: snippet.is_favorite,
             }))
@@ -152,8 +164,8 @@ export default function Dashboard() {
             id: snippet.id,
             title: snippet.title,
             content: snippet.content,
-            language: snippet.language.toLowerCase(),
-            tags: snippet.tags,
+            language: snippet.language?.toLowerCase() || "",
+            tags: snippet.tags || [],
             folder_ids: snippetFoldersData
               .filter((sf: any) => sf.snippet_id === snippet.id)
               .map((sf: any) => sf.folder_id),
@@ -196,7 +208,7 @@ export default function Dashboard() {
             id: payload.new.id,
             title: payload.new.title,
             content: payload.new.content,
-            language: payload.new.language.toLowerCase(),
+            language: (payload.new.language || "").toLowerCase(),
             tags: payload.new.tags || [],
             folder_ids: [],
             isFavorite: payload.new.is_favorite,
@@ -334,7 +346,7 @@ export default function Dashboard() {
     try {
       if (updatedSnippet.id === "") {
         // New snippet
-        const { data, error } = await supabase
+        const { data, error } = (await supabase
           .from("snippets")
           .insert({
             title: updatedSnippet.title,
@@ -345,20 +357,24 @@ export default function Dashboard() {
             owner: user.id,
           })
           .select()
-          .single();
+          .single()) as { data: SnippetTable | null; error: any };
 
         if (error) {
           throw new Error(error.message || "Failed to save snippet");
         }
 
-        const newSnippet = {
+        if (!data) {
+          throw new Error("No data returned from snippet creation");
+        }
+
+        const newSnippet: Snippet = {
           id: data.id,
           title: data.title,
           content: data.content,
-          language: data.language.toLowerCase(),
+          language: data.language ? data.language.toLowerCase() : "",
           tags: data.tags || [],
           folder_ids: [],
-          isFavorite: data.is_favorite,
+          isFavorite: data.is_favorite || false,
         };
 
         // Assign to folder if selected
