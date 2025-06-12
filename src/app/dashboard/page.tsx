@@ -26,7 +26,7 @@ type SnippetTable = {
   id: string;
   title: string;
   content: string;
-  language: string;
+  language: string; // language_type enum values
   tags: string[] | null;
   is_favorite: boolean;
   owner: string;
@@ -62,21 +62,21 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Valid languages (match Supabase language_type enum)
+  // Valid languages (match Supabase language_type enum, capitalized)
   const validLanguages = [
-    "bash",
-    "c",
-    "cpp",
-    "css",
-    "go",
-    "html",
-    "java",
-    "javascript",
-    "python",
-    "ruby",
-    "rust",
-    "sql",
-    "typescript",
+    "Bash",
+    "C",
+    "CPP",
+    "CSS",
+    "Go",
+    "HTML",
+    "Java",
+    "JavaScript",
+    "Python",
+    "Ruby",
+    "Rust",
+    "SQL",
+    "TypeScript",
   ];
 
   useEffect(() => {
@@ -153,7 +153,7 @@ export default function Dashboard() {
               id: snippet.id,
               title: snippet.title,
               content: snippet.content,
-              language: snippet.language?.toLowerCase() || "",
+              language: snippet.language || "",
               tags: snippet.tags || [],
               folder_ids: [],
               isFavorite: snippet.is_favorite,
@@ -164,7 +164,7 @@ export default function Dashboard() {
             id: snippet.id,
             title: snippet.title,
             content: snippet.content,
-            language: snippet.language?.toLowerCase() || "",
+            language: snippet.language || "",
             tags: snippet.tags || [],
             folder_ids: snippetFoldersData
               .filter((sf: any) => sf.snippet_id === snippet.id)
@@ -208,7 +208,7 @@ export default function Dashboard() {
             id: payload.new.id,
             title: payload.new.title,
             content: payload.new.content,
-            language: (payload.new.language || "").toLowerCase(),
+            language: payload.new.language || "",
             tags: payload.new.tags || [],
             folder_ids: [],
             isFavorite: payload.new.is_favorite,
@@ -371,7 +371,7 @@ export default function Dashboard() {
           id: data.id,
           title: data.title,
           content: data.content,
-          language: data.language ? data.language.toLowerCase() : "",
+          language: data.language || "",
           tags: data.tags || [],
           folder_ids: [],
           isFavorite: data.is_favorite || false,
