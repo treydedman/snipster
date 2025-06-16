@@ -21,14 +21,14 @@ type User = {
 
 type NavbarProps = {
   user: User | null;
-  onLogout: () => void;
+  onLogout?: () => void;
 };
 
 export default function Navbar({ user, onLogout }: NavbarProps) {
   const { setTheme, resolvedTheme } = useTheme();
 
   const handleLogoutWithConfirm = () => {
-    if (window.confirm("Are you sure you want to log out?")) {
+    if (onLogout && window.confirm("Are you sure you want to log out?")) {
       onLogout();
     }
   };
@@ -77,15 +77,17 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
           )}
 
           {/* Logout Button */}
-          <Button
-            variant="outline"
-            size="icon"
-            className="border-zinc-700 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white"
-            onClick={handleLogoutWithConfirm}
-          >
-            <LogOut className="h-5 w-5" />
-            <span className="sr-only">Log out</span>
-          </Button>
+          {user && onLogout && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="border-zinc-700 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white"
+              onClick={handleLogoutWithConfirm}
+            >
+              <LogOut className="h-5 w-5" />
+              <span className="sr-only">Log out</span>
+            </Button>
+          )}
 
           {/* Theme Toggle (Far Right) */}
           <DropdownMenu>

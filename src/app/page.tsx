@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Navbar />
+      <Navbar user={null} />
       <section className="py-20 md:py-24 flex items-center justify-center bg-background">
         <div className="max-w-4xl mx-auto text-center px-4 flex flex-col items-center">
           <Image
@@ -85,7 +85,7 @@ export default function HomePage() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Use folders,tags, and languages to keep your snippets
+                  Use folders, tags, and languages to keep your snippets
                   organized.
                 </p>
               </CardContent>
@@ -124,7 +124,7 @@ export default function HomePage() {
               Sign In
             </Link>
             <Link
-              href="/guest-sign-in"
+              href="/auth/guest-sign-in"
               className="text-blue-600 hover:font-bold hover:underline"
             >
               Try It Out

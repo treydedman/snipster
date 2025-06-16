@@ -26,7 +26,7 @@ type SnippetTable = {
   id: string;
   title: string;
   content: string;
-  language: string; // language_type enum values
+  language: string;
   tags: string[] | null;
   is_favorite: boolean;
   owner: string;
@@ -587,7 +587,7 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/auth/sign-in");
+    router.push("/");
   };
 
   const foldersForSnippetCard: Folder[] = folders.map(({ id, name }) => ({
