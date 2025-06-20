@@ -10,7 +10,7 @@ import Sidebar from "@/components/Sidebar";
 import SnippetCard from "@/components/SnippetCard";
 import SnippetEditor from "@/components/SnippetEditor";
 
-// Define Snippet type to match Supabase snippets table
+// Define Snippet type for UI
 type Snippet = {
   id: string;
   title: string;
@@ -21,7 +21,7 @@ type Snippet = {
   isFavorite: boolean;
 };
 
-// Supabase snippets table type (for query results)
+// Supabase snippets table type
 type SnippetTable = {
   id: string;
   title: string;
@@ -30,6 +30,12 @@ type SnippetTable = {
   tags: string[] | null;
   is_favorite: boolean;
   owner: string;
+};
+
+// Supabase snippet_folders table type
+type SnippetFolder = {
+  snippet_id: string;
+  folder_id: string;
 };
 
 type Folder = {
@@ -62,7 +68,6 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Valid languages (match Supabase language_type enum, capitalized)
   const validLanguages = [
     "Bash",
     "C",
@@ -129,7 +134,7 @@ export default function Dashboard() {
 
         const { data: snippetData, error: snippetError } = await supabase
           .from("snippets")
-          .select("id, title, content, language, tags, is_favorite")
+          .select("id, title, content, language, tags, is_favorite, owner")
           .eq("owner", userId);
 
         if (snippetError) {
@@ -144,12 +149,12 @@ export default function Dashboard() {
             .select("snippet_id, folder_id")
             .in(
               "snippet_id",
-              snippetData.map((snippet: { id: string }) => snippet.id)
+              (snippetData as SnippetTable[]).map((snippet) => snippet.id)
             );
 
         if (snippetFoldersError) {
           setSnippets(
-            snippetData.map((snippet: any) => ({
+            (snippetData as SnippetTable[]).map((snippet) => ({
               id: snippet.id,
               title: snippet.title,
               content: snippet.content,
@@ -160,17 +165,19 @@ export default function Dashboard() {
             }))
           );
         } else {
-          const formattedSnippets = snippetData.map((snippet: any) => ({
-            id: snippet.id,
-            title: snippet.title,
-            content: snippet.content,
-            language: snippet.language || "",
-            tags: snippet.tags || [],
-            folder_ids: snippetFoldersData
-              .filter((sf: any) => sf.snippet_id === snippet.id)
-              .map((sf: any) => sf.folder_id),
-            isFavorite: snippet.is_favorite,
-          }));
+          const formattedSnippets = (snippetData as SnippetTable[]).map(
+            (snippet) => ({
+              id: snippet.id,
+              title: snippet.title,
+              content: snippet.content,
+              language: snippet.language || "",
+              tags: snippet.tags || [],
+              folder_ids: (snippetFoldersData as SnippetFolder[])
+                .filter((sf) => sf.snippet_id === snippet.id)
+                .map((sf) => sf.folder_id),
+              isFavorite: snippet.is_favorite,
+            })
+          );
           setSnippets(formattedSnippets);
           setFilteredSnippets(formattedSnippets);
         }
@@ -193,8 +200,11 @@ export default function Dashboard() {
         (payload) => {
           setSnippets((prev) =>
             prev.map((s) =>
-              s.id === payload.new.id
-                ? { ...s, isFavorite: payload.new.is_favorite }
+              s.id === (payload.new as SnippetTable).id
+                ? {
+                    ...s,
+                    isFavorite: (payload.new as SnippetTable).is_favorite,
+                  }
                 : s
             )
           );
@@ -205,13 +215,13 @@ export default function Dashboard() {
         { event: "INSERT", schema: "public", table: "snippets" },
         (payload) => {
           const newSnippet = {
-            id: payload.new.id,
-            title: payload.new.title,
-            content: payload.new.content,
-            language: payload.new.language || "",
-            tags: payload.new.tags || [],
+            id: (payload.new as SnippetTable).id,
+            title: (payload.new as SnippetTable).title,
+            content: (payload.new as SnippetTable).content,
+            language: (payload.new as SnippetTable).language || "",
+            tags: (payload.new as SnippetTable).tags || [],
             folder_ids: [],
-            isFavorite: payload.new.is_favorite,
+            isFavorite: (payload.new as SnippetTable).is_favorite,
           };
           setSnippets((prev) => [...prev, newSnippet]);
           setFilteredSnippets((prev) => [...prev, newSnippet]);
@@ -227,14 +237,20 @@ export default function Dashboard() {
         (payload) => {
           setSnippets((prev) =>
             prev.map((s) =>
-              s.id === payload.new.snippet_id
-                ? { ...s, folder_ids: [...s.folder_ids, payload.new.folder_id] }
+              s.id === (payload.new as SnippetFolder).snippet_id
+                ? {
+                    ...s,
+                    folder_ids: [
+                      ...s.folder_ids,
+                      (payload.new as SnippetFolder).folder_id,
+                    ],
+                  }
                 : s
             )
           );
           setFolders((prev) =>
             prev.map((f) =>
-              f.id === payload.new.folder_id
+              f.id === (payload.new as SnippetFolder).folder_id
                 ? { ...f, snippetCount: f.snippetCount + 1 }
                 : f
             )
@@ -286,6 +302,11 @@ export default function Dashboard() {
     );
   }, [selectedSnippetId, snippets]);
 
+  const foldersForSnippetCard = useMemo(
+    () => folders.map(({ id, name }) => ({ id, name })),
+    [folders]
+  );
+
   const handleViewChange = (view: ViewType, folderId: string | null = null) => {
     if (
       view !== "all" &&
@@ -325,7 +346,6 @@ export default function Dashboard() {
       return;
     }
 
-    // Validate snippet
     if (!updatedSnippet.title.trim()) {
       toast.error("Snippet title is required!");
       return;
@@ -345,8 +365,7 @@ export default function Dashboard() {
 
     try {
       if (updatedSnippet.id === "") {
-        // New snippet
-        const { data, error } = (await supabase
+        const { data, error } = await supabase
           .from("snippets")
           .insert({
             title: updatedSnippet.title,
@@ -357,7 +376,7 @@ export default function Dashboard() {
             owner: user.id,
           })
           .select()
-          .single()) as { data: SnippetTable | null; error: any };
+          .single();
 
         if (error) {
           throw new Error(error.message || "Failed to save snippet");
@@ -377,7 +396,6 @@ export default function Dashboard() {
           isFavorite: data.is_favorite || false,
         };
 
-        // Assign to folder if selected
         if (selectedFolderId) {
           const { error: folderError } = await supabase
             .from("snippet_folders")
@@ -392,7 +410,6 @@ export default function Dashboard() {
           newSnippet.folder_ids = [selectedFolderId];
         }
 
-        // Update state
         setSnippets((prev) => [...prev, newSnippet]);
         setFilteredSnippets((prev) => [...prev, newSnippet]);
         if (selectedFolderId) {
@@ -407,7 +424,6 @@ export default function Dashboard() {
 
         toast.success("Snippet created successfully!");
       } else {
-        // Existing snippet
         const { error } = await supabase
           .from("snippets")
           .update({
@@ -429,12 +445,11 @@ export default function Dashboard() {
         toast.success("Snippet updated successfully!");
       }
 
-      // Close editor
       setSelectedSnippetId(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Save error:", error);
       toast.error(
-        `Failed to save snippet: ${error.message || "Unknown error"}`
+        `Failed to save snippet: ${(error as Error).message || "Unknown error"}`
       );
     }
   };
@@ -510,7 +525,6 @@ export default function Dashboard() {
     const oldFolderId = snippet.folder_ids[0] || null;
 
     try {
-      // Check for existing folder assignment
       const { data: existingFolder, error: checkError } = await supabase
         .from("snippet_folders")
         .select("folder_id")
@@ -524,7 +538,6 @@ export default function Dashboard() {
         return;
       }
 
-      // Delete existing folder assignment
       const { error: deleteError } = await supabase
         .from("snippet_folders")
         .delete()
@@ -533,7 +546,6 @@ export default function Dashboard() {
         throw deleteError;
       }
 
-      // Insert new folder assignment
       if (folderId) {
         const { error: insertError } = await supabase
           .from("snippet_folders")
@@ -543,7 +555,6 @@ export default function Dashboard() {
         }
       }
 
-      // Update Dashboard state
       setSnippets((prev) =>
         prev.map((s) =>
           s.id === snippetId
@@ -562,7 +573,6 @@ export default function Dashboard() {
         return newFolders;
       });
 
-      // Update Sidebar state
       if (updateSidebarFolders) {
         updateSidebarFolders(
           folders.map((f) =>
@@ -578,9 +588,9 @@ export default function Dashboard() {
       toast.success(
         folderId ? "Snippet moved to folder!" : "Snippet removed from folder!"
       );
-    } catch (error: any) {
+    } catch (error) {
       toast.error(
-        `Failed to move snippet: ${error.message || "Unknown error"}`
+        `Failed to move snippet: ${(error as Error).message || "Unknown error"}`
       );
     }
   };
@@ -589,11 +599,6 @@ export default function Dashboard() {
     await supabase.auth.signOut();
     router.push("/");
   };
-
-  const foldersForSnippetCard: Folder[] = folders.map(({ id, name }) => ({
-    id,
-    name,
-  }));
 
   if (loading) {
     return (
@@ -631,6 +636,7 @@ export default function Dashboard() {
                 ? "hidden"
                 : "w-full md:w-80 flex flex-col gap-4"
             }
+            {...(isMobile && selectedSnippetId ? { inert: true } : {})}
           >
             <h2 className="text-2xl font-bold mb-4">Snippets</h2>
             <div className="flex justify-between items-center">
@@ -657,7 +663,7 @@ export default function Dashboard() {
               {filteredSnippets.length > 0 ? (
                 filteredSnippets.map((snippet) => (
                   <SnippetCard
-                    key={`${snippet.id}-${snippet.isFavorite}`}
+                    key={snippet.id}
                     snippet={snippet}
                     isSelected={selectedSnippetId === snippet.id}
                     onClick={() => handleSnippetClick(snippet.id)}

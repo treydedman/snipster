@@ -134,6 +134,7 @@ export default function SnippetEditor({
       viewRef.current = null;
       isMounted.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]);
 
   // Sync snippet props with state

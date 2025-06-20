@@ -25,7 +25,7 @@ type NavbarProps = {
 };
 
 export default function Navbar({ user, onLogout }: NavbarProps) {
-  const { setTheme, resolvedTheme } = useTheme();
+  const { setTheme } = useTheme();
 
   const handleLogoutWithConfirm = () => {
     if (onLogout && window.confirm("Are you sure you want to log out?")) {
@@ -63,9 +63,11 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
           {user && (
             <div className="flex items-center gap-2">
               {user.avatar_url ? (
-                <img
+                <Image
                   src={user.avatar_url}
                   alt={`${user.username}'s avatar`}
+                  width={32}
+                  height={32}
                   className="w-8 h-8 rounded-full object-cover avatar"
                 />
               ) : (

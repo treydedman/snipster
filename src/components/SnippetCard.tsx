@@ -116,7 +116,7 @@ export default function SnippetCard({
                 <FontAwesomeIcon icon={faEllipsisV} />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-40">
+            <DropdownMenuContent className="w-40" aria-hidden={undefined}>
               <DropdownMenuItem
                 onClick={handleEdit}
                 className="hover:cursor-pointer"

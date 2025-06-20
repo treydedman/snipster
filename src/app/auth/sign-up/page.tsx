@@ -11,13 +11,12 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGithub } from "@fortawesome/free-brands-svg-icons"; // Import the GitHub icon
+import { faGithub } from "@fortawesome/free-brands-svg-icons";
 
 const formSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -25,10 +24,12 @@ const formSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 export default function SignUp() {
   const router = useRouter();
 
-  const form = useForm({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
@@ -37,7 +38,7 @@ export default function SignUp() {
     },
   });
 
-  const onSubmit = async (values) => {
+  const onSubmit = async (values: FormValues) => {
     const { email, password, username } = values;
 
     const { data, error: authError } = await supabase.auth.signUp({
@@ -47,34 +48,40 @@ export default function SignUp() {
 
     if (authError) {
       form.setError("root", { message: authError.message });
-    } else {
-      // Create user profile
-      const { error: profileError } = await supabase
-        .from("users")
-        .insert({ id: data.user.id, username });
-
-      if (profileError) {
-        form.setError("root", { message: profileError.message });
-      } else {
-        // Create default folder
-        const { error: folderError } = await supabase
-          .from("folders")
-          .insert({ owner: data.user.id, name: "Inbox" });
-
-        if (folderError) {
-          form.setError("root", { message: folderError.message });
-        } else {
-          router.push("/auth/sign-in");
-        }
-      }
+      return;
     }
+
+    if (!data.user) {
+      form.setError("root", { message: "Sign-up failed: No user returned" });
+      return;
+    }
+
+    const { error: profileError } = await supabase
+      .from("users")
+      .insert({ id: data.user.id, username });
+
+    if (profileError) {
+      form.setError("root", { message: profileError.message });
+      return;
+    }
+
+    const { error: folderError } = await supabase
+      .from("folders")
+      .insert({ owner: data.user.id, name: "Inbox" });
+
+    if (folderError) {
+      form.setError("root", { message: folderError.message });
+      return;
+    }
+
+    router.push("/auth/sign-in");
   };
 
   const handleGitHubSignIn = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: "http://localhost:3000/auth/callback", // Adjust for production
+        redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/callback`, // Vercel URL in production
       },
     });
 
@@ -99,7 +106,7 @@ export default function SignUp() {
                   <FormControl>
                     <Input
                       {...field}
-                      type="username"
+                      type="text"
                       placeholder="Username"
                       className="bg-muted"
                     />
