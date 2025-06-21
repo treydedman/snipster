@@ -123,14 +123,14 @@ export default function Sidebar({
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "folders" },
-          (payload) => {
+          () => {
             fetchFolders();
           }
         )
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "snippet_folders" },
-          (payload) => {
+          () => {
             fetchFolders();
           }
         )
@@ -324,7 +324,7 @@ export default function Sidebar({
                 <FontAwesomeIcon icon={faPlus} />
               </button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent aria-hidden={undefined}>
               <DialogHeader>
                 <DialogTitle>Create New Folder</DialogTitle>
                 <DialogDescription>
@@ -397,7 +397,7 @@ export default function Sidebar({
           </div>
         ))}
         <Dialog open={isEditFolderOpen} onOpenChange={setIsEditFolderOpen}>
-          <DialogContent>
+          <DialogContent aria-hidden={undefined}>
             <DialogHeader>
               <DialogTitle>Edit Folder</DialogTitle>
               <DialogDescription>
@@ -427,7 +427,7 @@ export default function Sidebar({
           </DialogContent>
         </Dialog>
         <Dialog open={isDeleteFolderOpen} onOpenChange={setIsDeleteFolderOpen}>
-          <DialogContent>
+          <DialogContent aria-hidden={undefined}>
             <DialogHeader>
               <DialogTitle>Delete Folder</DialogTitle>
               <DialogDescription>
