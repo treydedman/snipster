@@ -23,10 +23,12 @@ const formSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
+type SignInFormValues = z.infer<typeof formSchema>;
+
 export default function SignIn() {
   const router = useRouter();
 
-  const form = useForm({
+  const form = useForm<SignInFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       identifier: "",
@@ -34,7 +36,7 @@ export default function SignIn() {
     },
   });
 
-  const onSubmit = async (values) => {
+  const onSubmit = async (values: SignInFormValues) => {
     const { identifier, password } = values;
 
     let email = identifier;
