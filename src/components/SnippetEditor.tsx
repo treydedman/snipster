@@ -295,7 +295,7 @@ export default function SnippetEditor({
             value={tagsInput}
             onChange={handleTagsInput}
             onKeyDown={handleTagsSubmit}
-            placeholder="Enter tags, separated by commas (ex: sql, query)"
+            placeholder="Enter a tag followed by a comma (ex: boilerplate,)"
             className="p-2 rounded bg-muted text-foreground w-full"
           />
           {tags.length > 0 && (
