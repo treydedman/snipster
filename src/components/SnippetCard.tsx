@@ -171,8 +171,8 @@ export default function SnippetCard({
                   <DialogHeader>
                     <DialogTitle>Delete Snippet</DialogTitle>
                     <DialogDescription>
-                      Are you sure you want to delete "{snippet.title}"? This
-                      action cannot be undone.
+                      Are you sure you want to delete &quot;{snippet.title}
+                      &quot;? This action cannot be undone.
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter className="mt-4">

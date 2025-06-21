@@ -431,8 +431,8 @@ export default function Sidebar({
             <DialogHeader>
               <DialogTitle>Delete Folder</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete "{deleteFolder?.name}"? This
-                will remove the folder and unlink{" "}
+                Are you sure you want to delete &quot;{deleteFolder?.name}
+                &quot;? This will remove the folder and unlink{" "}
                 {deleteFolder?.snippetCount || 0} snippet(s) from it. Snippets
                 will remain in your collection.
               </DialogDescription>
