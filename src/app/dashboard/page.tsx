@@ -54,7 +54,6 @@ export default function Dashboard() {
   const [user, setUser] = useState<{
     id: string;
     username: string;
-    avatar_url?: string | null;
   } | null>(null);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [filteredSnippets, setFilteredSnippets] = useState<Snippet[]>([]);
@@ -103,14 +102,75 @@ export default function Dashboard() {
         }
 
         const userId = session.user.id;
+        console.log("User ID:", userId); // Debug
         const isGuest =
           session.user.email === "guest@example.com" ||
           session.user.user_metadata?.role === "guest";
-        const username = isGuest
+        let username = isGuest
           ? "Guest"
-          : session.user.user_metadata?.username || "User";
-        const avatar_url = session.user.user_metadata?.avatar_url || null;
-        setUser({ id: userId, username, avatar_url });
+          : session.user.user_metadata?.preferred_username ||
+            `user_${userId.slice(0, 8)}`;
+
+        // Ensure username is >= 3 characters
+        if (username.length < 3) {
+          username = `${username}_user`;
+        }
+        console.log("Initial username:", username); // Debug
+
+        // Check if user exists
+        let { data: existingUser, error: userError } = await supabase
+          .from("users")
+          .select("id, username")
+          .eq("id", userId)
+          .single();
+
+        if (userError || !existingUser) {
+          // Handle username conflicts
+          let suffix = 0;
+          let uniqueUsername = username;
+          while (true) {
+            const { data: usernameCheck, error: checkError } = await supabase
+              .from("users")
+              .select("id")
+              .eq("username", uniqueUsername)
+              .maybeSingle();
+            if (checkError) {
+              console.error("Username check error:", checkError);
+              setError("Failed to validate username");
+              setLoading(false);
+              return;
+            }
+            if (!usernameCheck) break;
+            suffix++;
+            uniqueUsername = `${username}_${suffix}`;
+            if (uniqueUsername.length < 3) {
+              uniqueUsername = `${uniqueUsername}_user`;
+            }
+          }
+
+          const { error: insertUserError } = await supabase
+            .from("users")
+            .insert({
+              id: userId,
+              username: uniqueUsername,
+              created_at: new Date().toISOString(),
+            });
+          if (insertUserError) {
+            console.error("Failed to sync user:", insertUserError);
+            setError(
+              `Failed to sync user: ${
+                insertUserError.message || "Unknown error"
+              }`
+            );
+            setLoading(false);
+            return;
+          }
+          username = uniqueUsername;
+        } else {
+          username = existingUser.username;
+        }
+
+        setUser({ id: userId, username });
 
         const { data: folderData, error: folderError } = await supabase
           .from("folders")
@@ -181,7 +241,8 @@ export default function Dashboard() {
           setSnippets(formattedSnippets);
           setFilteredSnippets(formattedSnippets);
         }
-      } catch {
+      } catch (err) {
+        console.error("Fetch error:", err);
         setError("An unexpected error occurred");
       } finally {
         setLoading(false);
