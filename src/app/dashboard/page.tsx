@@ -93,7 +93,7 @@ export default function Dashboard() {
         } = await supabase.auth.getSession();
         if (sessionError) {
           setError("Failed to authenticate");
-          toast.error("Session error. Please sign in again.");
+          toast.error("Session error. Please sign out and sign in again.");
           setLoading(false);
           return;
         }
@@ -137,44 +137,33 @@ export default function Dashboard() {
           // Handle username conflicts
           let suffix = 0;
           let uniqueUsername = baseUsername;
-          while (true) {
-            const { data: usernameCheck, error: checkError } = await supabase
-              .from("users")
-              .select("id")
-              .eq("username", isGuest ? "Guest" : uniqueUsername)
-              .maybeSingle();
-            if (checkError) {
-              setError("Failed to validate username");
-              toast.error("Failed to validate username");
-              setLoading(false);
-              return;
-            }
-            if (!usernameCheck) break;
-            if (!isGuest) {
+          if (!isGuest) {
+            while (true) {
+              const { data: usernameCheck, error: checkError } = await supabase
+                .from("users")
+                .select("id")
+                .eq("username", uniqueUsername)
+                .maybeSingle();
+              if (checkError) {
+                setError("Failed to validate username");
+                toast.error("Failed to validate username");
+                setLoading(false);
+                return;
+              }
+              if (!usernameCheck) break;
               suffix++;
               uniqueUsername = `${baseUsername}_${suffix}`;
               if (uniqueUsername.length < 3) {
                 uniqueUsername = `${uniqueUsername}_snip`;
               }
-            } else {
-              // For guest, ensure username is 'Guest'
-              const { error: updateError } = await supabase
-                .from("users")
-                .update({ username: "Guest" })
-                .eq("id", userId);
-              if (updateError) {
-                setError("Failed to update guest username");
-                toast.error("Failed to update guest username");
-                setLoading(false);
-                return;
-              }
-              break;
             }
+          } else {
+            uniqueUsername = "Guest";
           }
 
           const insertPayload = {
             id: userId,
-            username: isGuest ? "Guest" : uniqueUsername,
+            username: uniqueUsername,
             created_at: new Date().toISOString(),
           };
 
@@ -187,24 +176,10 @@ export default function Dashboard() {
             setLoading(false);
             return;
           }
-          username = isGuest ? "Guest" : uniqueUsername;
+          username = uniqueUsername;
         } else {
           // Normalize username for guest
-          if (isGuest && existingUser.username !== "Guest") {
-            const { error: updateError } = await supabase
-              .from("users")
-              .update({ username: "Guest" })
-              .eq("id", userId);
-            if (updateError) {
-              setError("Failed to update guest username");
-              toast.error("Failed to update guest username");
-              setLoading(false);
-              return;
-            }
-            username = "Guest";
-          } else {
-            username = existingUser.username;
-          }
+          username = isGuest ? "Guest" : existingUser.username;
         }
 
         setUser({ id: userId, username, avatar_url });
@@ -602,18 +577,22 @@ export default function Dashboard() {
         .delete()
         .eq("id", snippetId)
         .eq("owner", user?.id);
-      if (snippetError)
+      if (snippetError) {
         throw new Error(snippetError.message || "Failed to delete snippet");
+      }
       const { error: folderError } = await supabase
         .from("snippet_folders")
         .delete()
         .eq("snippet_id", snippetId);
-      if (folderError)
+      if (folderError) {
         throw new Error(
           folderError.message || "Failed to delete snippet folder"
         );
+      }
       setSnippets((prev) => prev.filter((s) => s.id !== snippetId));
-      if (selectedSnippetId === snippetId) setSelectedSnippetId(null);
+      if (selectedSnippetId === snippetId) {
+        setSelectedSnippetId(null);
+      }
       toast.success("Snippet deleted successfully!");
     } catch (error) {
       toast.error("Failed to delete snippet!");
@@ -638,8 +617,9 @@ export default function Dashboard() {
         .select("folder_id")
         .eq("snippet_id", snippetId)
         .maybeSingle();
-      if (checkError)
-        throw new Error(checkError.message || "Failed to check folder");
+      if (checkError) {
+        throw new Error("Failed to check folder");
+      }
       if (existingFolder && existingFolder.folder_id === folderId) {
         toast.info("Snippet is already in this folder!");
         return;
@@ -649,19 +629,17 @@ export default function Dashboard() {
         .from("snippet_folders")
         .delete()
         .eq("snippet_id", snippetId);
-      if (deleteError)
-        throw new Error(
-          deleteError.message || "Failed to delete snippet folder"
-        );
+      if (deleteError) {
+        throw new Error("Failed to delete snippet");
+      }
 
       if (folderId) {
         const { error: insertError } = await supabase
           .from("snippet_folders")
           .insert({ snippet_id: snippetId, folder_id: folderId });
-        if (insertError)
-          throw new Error(
-            insertError.message || "Failed to insert snippet folder"
-          );
+        if (insertError) {
+          throw new Error("Failed to insert snippet folder");
+        }
       }
 
       setSnippets((prev) =>
@@ -738,12 +716,12 @@ export default function Dashboard() {
           setFolders={setFolders}
           folders={folders}
         />
-        <div className="flex-1 flex flex-col md:flex-row pt-4 px-4 md:pt-4 md:px-8 gap-4">
+        <div className="flex-1 flex flex-col md:flex-row pt-4 px-4 md:pt-4 md:px-8 gap-2">
           <div
             className={
               isMobile && selectedSnippetId
                 ? "hidden"
-                : "w-full md:w-80 flex flex-col gap-4"
+                : "w-full md:w-80 flex flex-col gap-2"
             }
             {...(isMobile && selectedSnippetId ? { inert: true } : {})}
           >
@@ -791,7 +769,7 @@ export default function Dashboard() {
                     : selectedView === "folder"
                     ? "No snippets in this folder."
                     : selectedView === "favorites"
-                    ? "No favorites yet—star a snippet to add it here!"
+                    ? "No favorites yet."
                     : "Shared snippets will be listed here."}
                 </p>
               )}
