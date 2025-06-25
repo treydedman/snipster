@@ -170,6 +170,7 @@ export default function SignIn() {
           <FontAwesomeIcon icon={faGithub} className="mr-2" /> Sign In with
           GitHub
         </Button>
+        {/* eslint-disable-next-line react/no-unescaped-entities */}
         <p className="mt-8 text-muted-foreground">
           Don't have an account?{" "}
           <Link

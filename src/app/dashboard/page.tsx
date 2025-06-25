@@ -560,6 +560,7 @@ export default function Dashboard() {
           ? "Snippet added to favorites!"
           : "Snippet removed from favorites!"
       );
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       setSnippets((prev) =>
         prev.map((s) =>
