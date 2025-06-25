@@ -480,7 +480,7 @@ export default function Sidebar({
           ))
         ) : (
           <p className="text-muted-foreground p-2">
-            No favorites yet -star a snippet to add it here!
+            No favorites yet - star a snippet to add it here!
           </p>
         )}
       </div>

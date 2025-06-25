@@ -32,28 +32,6 @@ export default function Callback() {
             );
           }
 
-          const { data: existingFolder, error: folderCheckError } =
-            await supabase
-              .from("folders")
-              .select("id")
-              .eq("owner", user.id)
-              .eq("name", "Snippets")
-              .maybeSingle();
-
-          if (folderCheckError) {
-            throw new Error("Failed to check default folder");
-          }
-
-          if (!existingFolder) {
-            const { error: folderError } = await supabase
-              .from("folders")
-              .insert({ owner: user.id, name: "Snippets" });
-
-            if (folderError) {
-              throw new Error("Failed to create default folder");
-            }
-          }
-
           toast.success(`Signed in successfully as ${profile.username}!`);
           router.push("/dashboard");
         } else {

@@ -83,23 +83,6 @@ export default function SignUp() {
       }
 
       if (authData.user) {
-        const { data: existingFolder } = await supabase
-          .from("folders")
-          .select("id")
-          .eq("owner", authData.user.id)
-          .eq("name", "Snippets")
-          .maybeSingle();
-
-        if (!existingFolder) {
-          const { error: folderError } = await supabase
-            .from("folders")
-            .insert({ owner: authData.user.id, name: "Snippets" });
-
-          if (folderError) {
-            console.error("Folder creation error:", folderError);
-          }
-        }
-
         toast.success("Sign-up successful!");
         router.push("/dashboard");
       } else {
