@@ -45,11 +45,12 @@ export default function SignUp() {
         .from("users")
         .select("id")
         .eq("username", username)
-        .single();
+        .maybeSingle();
 
-      if (userError && userError.code !== "PGRST116") {
+      if (userError) {
+        console.error("Username check error:", userError);
         form.setError("username", {
-          message: "Error checking username availability",
+          message: "Error checking username availability. Please try again.",
         });
         return;
       }
@@ -82,12 +83,21 @@ export default function SignUp() {
       }
 
       if (authData.user) {
-        const { error: folderError } = await supabase
+        const { data: existingFolder } = await supabase
           .from("folders")
-          .insert({ owner: authData.user.id, name: "Inbox" });
+          .select("id")
+          .eq("owner", authData.user.id)
+          .eq("name", "Snippets")
+          .maybeSingle();
 
-        if (folderError) {
-          // Silently handle folder error, as it's not critical for sign-up
+        if (!existingFolder) {
+          const { error: folderError } = await supabase
+            .from("folders")
+            .insert({ owner: authData.user.id, name: "Snippets" });
+
+          if (folderError) {
+            console.error("Folder creation error:", folderError);
+          }
         }
 
         toast.success("Sign-up successful!");
@@ -95,10 +105,11 @@ export default function SignUp() {
       } else {
         form.setError("root", { message: "Sign-up failed. Please try again." });
       }
-    } catch (error: any) {
-      form.setError("root", {
-        message: error.message || "An unexpected error occurred",
-      });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "An unexpected error occurred";
+      console.error("Sign-up error:", error);
+      form.setError("root", { message });
     }
   };
 

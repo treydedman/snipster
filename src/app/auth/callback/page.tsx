@@ -37,7 +37,7 @@ export default function Callback() {
               .from("folders")
               .select("id")
               .eq("owner", user.id)
-              .eq("name", "Inbox")
+              .eq("name", "Snippets")
               .maybeSingle();
 
           if (folderCheckError) {
@@ -47,7 +47,7 @@ export default function Callback() {
           if (!existingFolder) {
             const { error: folderError } = await supabase
               .from("folders")
-              .insert({ owner: user.id, name: "Inbox" });
+              .insert({ owner: user.id, name: "Snippets" });
 
             if (folderError) {
               throw new Error("Failed to create default folder");
@@ -59,8 +59,12 @@ export default function Callback() {
         } else {
           throw new Error("No session found");
         }
-      } catch (error: any) {
-        toast.error(error.message || "An error occurred during sign-in");
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "An error occurred during sign-in";
+        toast.error(message);
         router.push("/auth/sign-in");
       }
     };

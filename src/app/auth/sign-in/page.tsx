@@ -83,10 +83,10 @@ export default function SignIn() {
       } else {
         form.setError("root", { message: "Sign-in failed. Please try again." });
       }
-    } catch (error: any) {
-      form.setError("root", {
-        message: error.message || "An unexpected error occurred",
-      });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "An unexpected error occurred";
+      form.setError("root", { message });
     }
   };
 

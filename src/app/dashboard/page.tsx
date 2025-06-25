@@ -108,7 +108,7 @@ export default function Dashboard() {
         const avatar_url = session.user.user_metadata?.avatar_url || null;
 
         // Check if user exists
-        let { data: existingUser, error: userError } = await supabase
+        const { data: existingUser, error: userError } = await supabase
           .from("users")
           .select("id, username")
           .eq("id", userId)
@@ -258,7 +258,7 @@ export default function Dashboard() {
           setSnippets(formattedSnippets);
           setFilteredSnippets(formattedSnippets);
         }
-      } catch (err) {
+      } catch {
         setError("An unexpected error occurred");
         toast.error("An unexpected error occurred");
       } finally {
@@ -577,24 +577,22 @@ export default function Dashboard() {
         .delete()
         .eq("id", snippetId)
         .eq("owner", user?.id);
-      if (snippetError) {
+      if (snippetError)
         throw new Error(snippetError.message || "Failed to delete snippet");
-      }
       const { error: folderError } = await supabase
         .from("snippet_folders")
         .delete()
         .eq("snippet_id", snippetId);
-      if (folderError) {
+      if (folderError)
         throw new Error(
           folderError.message || "Failed to delete snippet folder"
         );
-      }
       setSnippets((prev) => prev.filter((s) => s.id !== snippetId));
       if (selectedSnippetId === snippetId) {
         setSelectedSnippetId(null);
       }
       toast.success("Snippet deleted successfully!");
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete snippet!");
     }
   };
@@ -630,7 +628,7 @@ export default function Dashboard() {
         .delete()
         .eq("snippet_id", snippetId);
       if (deleteError) {
-        throw new Error("Failed to delete snippet");
+        throw new Error("Failed to delete snippet folder");
       }
 
       if (folderId) {
@@ -675,10 +673,8 @@ export default function Dashboard() {
       toast.success(
         folderId ? "Snippet moved to folder!" : "Snippet removed from folder!"
       );
-    } catch (error) {
-      toast.error(
-        `Failed to move snippet: ${(error as Error).message || "Unknown error"}`
-      );
+    } catch {
+      toast.error("Failed to move snippet!");
     }
   };
 
