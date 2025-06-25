@@ -15,78 +15,90 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGithub } from "@fortawesome/free-brands-svg-icons";
+import { toast } from "sonner";
 
 const formSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
   email: z.string().email("Invalid email address"),
+  username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type SignUpFormValues = z.infer<typeof formSchema>;
 
 export default function SignUp() {
   const router = useRouter();
 
-  const form = useForm<FormValues>({
+  const form = useForm<SignUpFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
       email: "",
+      username: "",
       password: "",
     },
   });
 
-  const onSubmit = async (values: FormValues) => {
-    const { email, password, username } = values;
+  const onSubmit = async (values: SignUpFormValues) => {
+    const { email, username, password } = values;
 
-    const { data, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      const { data: existingUser, error: userError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("username", username)
+        .single();
 
-    if (authError) {
-      form.setError("root", { message: authError.message });
-      return;
-    }
+      if (userError && userError.code !== "PGRST116") {
+        form.setError("username", {
+          message: "Error checking username availability",
+        });
+        return;
+      }
 
-    if (!data.user) {
-      form.setError("root", { message: "Sign-up failed: No user returned" });
-      return;
-    }
+      if (existingUser) {
+        form.setError("username", { message: "Username is already taken" });
+        return;
+      }
 
-    const { error: profileError } = await supabase
-      .from("users")
-      .insert({ id: data.user.id, username });
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { preferred_username: username } },
+      });
 
-    if (profileError) {
-      form.setError("root", { message: profileError.message });
-      return;
-    }
+      if (authError) {
+        form.setError("root", { message: authError.message });
+        return;
+      }
 
-    const { error: folderError } = await supabase
-      .from("folders")
-      .insert({ owner: data.user.id, name: "Inbox" });
+      if (authData.user && !authData.user.confirmed_at) {
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (loginError) {
+          form.setError("root", { message: "Failed to auto-login" });
+          return;
+        }
+      }
 
-    if (folderError) {
-      form.setError("root", { message: folderError.message });
-      return;
-    }
+      if (authData.user) {
+        const { error: folderError } = await supabase
+          .from("folders")
+          .insert({ owner: authData.user.id, name: "Inbox" });
 
-    router.push("/auth/sign-in");
-  };
+        if (folderError) {
+          // Silently handle folder error, as it's not critical for sign-up
+        }
 
-  const handleGitHubSignIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "github",
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/callback`, // Vercel URL in production
-      },
-    });
-
-    if (error) {
-      form.setError("root", { message: error.message });
+        toast.success("Sign-up successful!");
+        router.push("/dashboard");
+      } else {
+        form.setError("root", { message: "Sign-up failed. Please try again." });
+      }
+    } catch (error: any) {
+      form.setError("root", {
+        message: error.message || "An unexpected error occurred",
+      });
     }
   };
 
@@ -94,27 +106,10 @@ export default function SignUp() {
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="w-full max-w-md p-8 bg-card rounded-lg shadow-md">
         <h1 className="text-3xl text-center font-bold text-foreground mb-12">
-          Create an Account
+          Sign Up
         </h1>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="text"
-                      placeholder="Username"
-                      className="bg-muted"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <FormField
               control={form.control}
               name="email"
@@ -125,6 +120,23 @@ export default function SignUp() {
                       {...field}
                       type="email"
                       placeholder="Email"
+                      className="bg-muted"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="text"
+                      placeholder="Username"
                       className="bg-muted"
                     />
                   </FormControl>
@@ -162,22 +174,6 @@ export default function SignUp() {
             </Button>
           </form>
         </Form>
-
-        <div className="flex items-center justify-center my-12">
-          <div className="border-t border-zinc-300 dark:border-zinc-600 flex-grow"></div>
-          <span className="mx-4 text-md text-zinc-700 dark:text-zinc-300">
-            or
-          </span>
-          <div className="border-t border-zinc-300 dark:border-zinc-600 flex-grow"></div>
-        </div>
-
-        <Button
-          className="w-full text-zinc-700 border border-zinc-300 bg-zinc-200 hover:bg-zinc-600 hover:text-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:border-zinc-600 cursor-pointer"
-          onClick={handleGitHubSignIn}
-        >
-          <FontAwesomeIcon icon={faGithub} className="mr-2" /> Sign Up with
-          GitHub
-        </Button>
         <p className="mt-8 text-muted-foreground">
           Already have an account?{" "}
           <Link

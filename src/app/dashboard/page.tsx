@@ -54,6 +54,7 @@ export default function Dashboard() {
   const [user, setUser] = useState<{
     id: string;
     username: string;
+    avatar_url?: string | null;
   } | null>(null);
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [filteredSnippets, setFilteredSnippets] = useState<Snippet[]>([]);
@@ -92,6 +93,7 @@ export default function Dashboard() {
         } = await supabase.auth.getSession();
         if (sessionError) {
           setError("Failed to authenticate");
+          toast.error("Session error. Please sign in again.");
           setLoading(false);
           return;
         }
@@ -102,20 +104,8 @@ export default function Dashboard() {
         }
 
         const userId = session.user.id;
-        console.log("User ID:", userId); // Debug
-        const isGuest =
-          session.user.email === "guest@example.com" ||
-          session.user.user_metadata?.role === "guest";
-        let username = isGuest
-          ? "Guest"
-          : session.user.user_metadata?.preferred_username ||
-            `user_${userId.slice(0, 8)}`;
-
-        // Ensure username is >= 3 characters
-        if (username.length < 3) {
-          username = `${username}_user`;
-        }
-        console.log("Initial username:", username); // Debug
+        const isGuest = session.user.email === "guest@example.com";
+        const avatar_url = session.user.user_metadata?.avatar_url || null;
 
         // Check if user exists
         let { data: existingUser, error: userError } = await supabase
@@ -124,53 +114,100 @@ export default function Dashboard() {
           .eq("id", userId)
           .single();
 
-        if (userError || !existingUser) {
+        if (userError && userError.code !== "PGRST116") {
+          setError("Failed to fetch user data");
+          toast.error("Failed to fetch user data");
+          setLoading(false);
+          return;
+        }
+
+        let username: string;
+        if (!existingUser) {
+          // Fallback username from email or userId
+          let baseUsername =
+            session.user.user_metadata?.preferred_username ||
+            session.user.email?.split("@")[0] ||
+            `user_${userId.slice(0, 8)}`;
+
+          // Ensure username is >= 3 characters
+          if (baseUsername.length < 3) {
+            baseUsername = `${baseUsername}_snip`;
+          }
+
           // Handle username conflicts
           let suffix = 0;
-          let uniqueUsername = username;
+          let uniqueUsername = baseUsername;
           while (true) {
             const { data: usernameCheck, error: checkError } = await supabase
               .from("users")
               .select("id")
-              .eq("username", uniqueUsername)
+              .eq("username", isGuest ? "Guest" : uniqueUsername)
               .maybeSingle();
             if (checkError) {
-              console.error("Username check error:", checkError);
               setError("Failed to validate username");
+              toast.error("Failed to validate username");
               setLoading(false);
               return;
             }
             if (!usernameCheck) break;
-            suffix++;
-            uniqueUsername = `${username}_${suffix}`;
-            if (uniqueUsername.length < 3) {
-              uniqueUsername = `${uniqueUsername}_user`;
+            if (!isGuest) {
+              suffix++;
+              uniqueUsername = `${baseUsername}_${suffix}`;
+              if (uniqueUsername.length < 3) {
+                uniqueUsername = `${uniqueUsername}_snip`;
+              }
+            } else {
+              // For guest, ensure username is 'Guest'
+              const { error: updateError } = await supabase
+                .from("users")
+                .update({ username: "Guest" })
+                .eq("id", userId);
+              if (updateError) {
+                setError("Failed to update guest username");
+                toast.error("Failed to update guest username");
+                setLoading(false);
+                return;
+              }
+              break;
             }
           }
 
+          const insertPayload = {
+            id: userId,
+            username: isGuest ? "Guest" : uniqueUsername,
+            created_at: new Date().toISOString(),
+          };
+
           const { error: insertUserError } = await supabase
             .from("users")
-            .insert({
-              id: userId,
-              username: uniqueUsername,
-              created_at: new Date().toISOString(),
-            });
+            .insert(insertPayload);
           if (insertUserError) {
-            console.error("Failed to sync user:", insertUserError);
-            setError(
-              `Failed to sync user: ${
-                insertUserError.message || "Unknown error"
-              }`
-            );
+            setError("Failed to sync user");
+            toast.error("Failed to sync user");
             setLoading(false);
             return;
           }
-          username = uniqueUsername;
+          username = isGuest ? "Guest" : uniqueUsername;
         } else {
-          username = existingUser.username;
+          // Normalize username for guest
+          if (isGuest && existingUser.username !== "Guest") {
+            const { error: updateError } = await supabase
+              .from("users")
+              .update({ username: "Guest" })
+              .eq("id", userId);
+            if (updateError) {
+              setError("Failed to update guest username");
+              toast.error("Failed to update guest username");
+              setLoading(false);
+              return;
+            }
+            username = "Guest";
+          } else {
+            username = existingUser.username;
+          }
         }
 
-        setUser({ id: userId, username });
+        setUser({ id: userId, username, avatar_url });
 
         const { data: folderData, error: folderError } = await supabase
           .from("folders")
@@ -178,14 +215,18 @@ export default function Dashboard() {
           .eq("owner", userId);
 
         if (folderError) {
+          toast.error("Failed to fetch folders");
           setFolders([]);
         } else {
           const foldersWithCounts = await Promise.all(
             (folderData as Folder[]).map(async (folder) => {
-              const { count } = await supabase
+              const { count, error: countError } = await supabase
                 .from("snippet_folders")
                 .select("snippet_id", { count: "exact" })
                 .eq("folder_id", folder.id);
+              if (countError) {
+                return { ...folder, snippetCount: 0 };
+              }
               return { ...folder, snippetCount: count || 0 };
             })
           );
@@ -199,6 +240,7 @@ export default function Dashboard() {
 
         if (snippetError) {
           setError("Failed to load snippets");
+          toast.error("Failed to load snippets");
           setLoading(false);
           return;
         }
@@ -242,8 +284,8 @@ export default function Dashboard() {
           setFilteredSnippets(formattedSnippets);
         }
       } catch (err) {
-        console.error("Fetch error:", err);
         setError("An unexpected error occurred");
+        toast.error("An unexpected error occurred");
       } finally {
         setLoading(false);
       }
@@ -508,7 +550,6 @@ export default function Dashboard() {
 
       setSelectedSnippetId(null);
     } catch (error) {
-      console.error("Save error:", error);
       toast.error(
         `Failed to save snippet: ${(error as Error).message || "Unknown error"}`
       );
@@ -536,14 +577,15 @@ export default function Dashboard() {
         .update({ is_favorite: newFavoriteStatus })
         .eq("id", snippetId)
         .eq("owner", user?.id);
-      if (error)
+      if (error) {
         throw new Error(error.message || "Failed to update favorite status");
+      }
       toast.success(
         newFavoriteStatus
           ? "Snippet added to favorites!"
           : "Snippet removed from favorites!"
       );
-    } catch {
+    } catch (error) {
       setSnippets((prev) =>
         prev.map((s) =>
           s.id === snippetId ? { ...s, isFavorite: !newFavoriteStatus } : s
@@ -558,17 +600,22 @@ export default function Dashboard() {
       const { error: snippetError } = await supabase
         .from("snippets")
         .delete()
-        .eq("id", snippetId);
-      if (snippetError) throw snippetError;
+        .eq("id", snippetId)
+        .eq("owner", user?.id);
+      if (snippetError)
+        throw new Error(snippetError.message || "Failed to delete snippet");
       const { error: folderError } = await supabase
         .from("snippet_folders")
         .delete()
         .eq("snippet_id", snippetId);
-      if (folderError) throw folderError;
+      if (folderError)
+        throw new Error(
+          folderError.message || "Failed to delete snippet folder"
+        );
       setSnippets((prev) => prev.filter((s) => s.id !== snippetId));
       if (selectedSnippetId === snippetId) setSelectedSnippetId(null);
       toast.success("Snippet deleted successfully!");
-    } catch {
+    } catch (error) {
       toast.error("Failed to delete snippet!");
     }
   };
@@ -591,9 +638,8 @@ export default function Dashboard() {
         .select("folder_id")
         .eq("snippet_id", snippetId)
         .maybeSingle();
-      if (checkError) {
-        throw checkError;
-      }
+      if (checkError)
+        throw new Error(checkError.message || "Failed to check folder");
       if (existingFolder && existingFolder.folder_id === folderId) {
         toast.info("Snippet is already in this folder!");
         return;
@@ -603,17 +649,19 @@ export default function Dashboard() {
         .from("snippet_folders")
         .delete()
         .eq("snippet_id", snippetId);
-      if (deleteError) {
-        throw deleteError;
-      }
+      if (deleteError)
+        throw new Error(
+          deleteError.message || "Failed to delete snippet folder"
+        );
 
       if (folderId) {
         const { error: insertError } = await supabase
           .from("snippet_folders")
           .insert({ snippet_id: snippetId, folder_id: folderId });
-        if (insertError) {
-          throw insertError;
-        }
+        if (insertError)
+          throw new Error(
+            insertError.message || "Failed to insert snippet folder"
+          );
       }
 
       setSnippets((prev) =>

@@ -3,50 +3,64 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "sonner";
 
-export default function AuthCallback() {
+export default function Callback() {
   const router = useRouter();
 
   useEffect(() => {
     const handleCallback = async () => {
-      const { data, error } = await supabase.auth.getSession();
-
-      if (error) {
-        console.error("Error in auth callback:", error);
-        router.push("/auth/sign-in");
-      } else if (data.session) {
-        const user = data.session.user;
-
-        // Check if user profile exists, if not create one
-        const { data: profile, error: profileError } = await supabase
-          .from("users")
-          .select("id")
-          .eq("id", user.id)
-          .single();
-
-        if (!profile && !profileError) {
-          const username =
-            user.user_metadata.preferred_username || `user_${user.id}`; // Fallback username
-          const githubUsername = user.user_metadata.preferred_username || null;
-          const avatarUrl = user.user_metadata.avatar_url || null;
-
-          const { error: insertError } = await supabase.from("users").insert({
-            id: user.id,
-            username,
-            github_username: githubUsername,
-            avatar_url: avatarUrl,
-          });
-
-          if (!insertError) {
-            // Create default folder
-            await supabase
-              .from("folders")
-              .insert({ owner: user.id, name: "Inbox" });
-          }
+      try {
+        const { data: sessionData, error: sessionError } =
+          await supabase.auth.getSession();
+        if (sessionError) {
+          throw new Error("Failed to retrieve session");
         }
 
-        router.push("/dashboard");
-      } else {
+        if (sessionData.session) {
+          const user = sessionData.session.user;
+
+          const { data: profile, error: profileError } = await supabase
+            .from("users")
+            .select("username")
+            .eq("id", user.id)
+            .single();
+
+          if (profileError || !profile) {
+            throw new Error(
+              "User profile not found. Please try signing up again."
+            );
+          }
+
+          const { data: existingFolder, error: folderCheckError } =
+            await supabase
+              .from("folders")
+              .select("id")
+              .eq("owner", user.id)
+              .eq("name", "Inbox")
+              .maybeSingle();
+
+          if (folderCheckError) {
+            throw new Error("Failed to check default folder");
+          }
+
+          if (!existingFolder) {
+            const { error: folderError } = await supabase
+              .from("folders")
+              .insert({ owner: user.id, name: "Inbox" });
+
+            if (folderError) {
+              throw new Error("Failed to create default folder");
+            }
+          }
+
+          toast.success(`Signed in successfully as ${profile.username}!`);
+          router.push("/dashboard");
+        } else {
+          throw new Error("No session found");
+        }
+      } catch (error: any) {
+        toast.error(error.message || "An error occurred during sign-in");
         router.push("/auth/sign-in");
       }
     };

@@ -17,9 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGithub } from "@fortawesome/free-brands-svg-icons";
+import { toast } from "sonner";
 
 const formSchema = z.object({
-  identifier: z.string().min(1, "Username or email is required"),
+  login: z.string().min(1, "Username or email is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -31,62 +32,68 @@ export default function SignIn() {
   const form = useForm<SignInFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      identifier: "",
+      login: "",
       password: "",
     },
   });
 
   const onSubmit = async (values: SignInFormValues) => {
-    const { identifier, password } = values;
+    const { login, password } = values;
 
-    let email = identifier;
+    try {
+      let email = login;
 
-    // Check if the identifier is a username (not an email format)
-    if (!identifier.includes("@")) {
-      const { data: user, error: userError } = await supabase
-        .from("users")
-        .select("id")
-        .eq("username", identifier)
-        .single();
+      if (!login.includes("@")) {
+        const { data: user, error: userError } = await supabase
+          .from("users")
+          .select("email")
+          .eq("username", login)
+          .single();
 
-      if (userError || !user) {
-        form.setError("identifier", { message: "Username not found" });
+        if (userError || !user) {
+          form.setError("login", { message: "Username not found" });
+          return;
+        }
+
+        email = user.email;
+      }
+
+      const { data: authData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+      if (signInError) {
+        form.setError("root", { message: signInError.message });
         return;
       }
 
-      // Fetch email from auth.users using the user's id
-      const { data: authUser, error: authError } = await supabase
-        .from("auth.users")
-        .select("email")
-        .eq("id", user.id)
-        .single();
+      if (authData.session) {
+        const { data: profile, error: profileError } = await supabase
+          .from("users")
+          .select("username")
+          .eq("id", authData.session.user.id)
+          .single();
 
-      if (authError || !authUser) {
-        form.setError("identifier", { message: "Error retrieving user email" });
-        return;
+        if (!profileError && profile) {
+          toast.success(`Signed in successfully as ${profile.username}!`);
+        }
+        router.push("/dashboard");
+      } else {
+        form.setError("root", { message: "Sign-in failed. Please try again." });
       }
-
-      email = authUser.email;
-    }
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      form.setError("root", { message: error.message });
-    } else {
-      router.push("/dashboard");
+    } catch (error: any) {
+      form.setError("root", {
+        message: error.message || "An unexpected error occurred",
+      });
     }
   };
 
   const handleGitHubSignIn = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
-      options: {
-        redirectTo: "http://localhost:3000/auth/callback", // Adjust for production
-      },
+      options: { redirectTo: "http://localhost:3000/auth/callback" },
     });
 
     if (error) {
@@ -104,7 +111,7 @@ export default function SignIn() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="identifier"
+              name="login"
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
@@ -149,7 +156,6 @@ export default function SignIn() {
             </Button>
           </form>
         </Form>
-
         <div className="flex items-center justify-center my-12">
           <div className="border-t border-zinc-300 dark:border-zinc-600 flex-grow"></div>
           <span className="mx-4 text-md text-zinc-700 dark:text-zinc-300">
@@ -157,7 +163,6 @@ export default function SignIn() {
           </span>
           <div className="border-t border-zinc-300 dark:border-zinc-600 flex-grow"></div>
         </div>
-
         <Button
           className="w-full text-zinc-700 border border-zinc-300 bg-zinc-200 hover:bg-zinc-600 hover:text-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:border-zinc-600 cursor-pointer"
           onClick={handleGitHubSignIn}
@@ -166,7 +171,7 @@ export default function SignIn() {
           GitHub
         </Button>
         <p className="mt-8 text-muted-foreground">
-          Don’t have an account?{" "}
+          Don't have an account?{" "}
           <Link
             href="/auth/sign-up"
             className="text-primary hover:underline hover:font-bold"
