@@ -65,7 +65,6 @@ export default function SignIn() {
         });
 
       if (signInError) {
-        console.error("Sign-in error:", JSON.stringify(signInError, null, 2));
         form.setError("root", { message: signInError.message });
         return;
       }
@@ -87,7 +86,6 @@ export default function SignIn() {
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "An unexpected error occurred";
-      console.error("Sign-in error:", JSON.stringify(error, null, 2));
       form.setError("root", { message });
     }
   };
@@ -103,7 +101,6 @@ export default function SignIn() {
       });
 
       if (error) {
-        console.error("GitHub OAuth error:", JSON.stringify(error, null, 2));
         form.setError("root", { message: error.message });
       }
     } catch (error) {
@@ -111,7 +108,6 @@ export default function SignIn() {
         error instanceof Error
           ? error.message
           : "An error occurred during GitHub sign-in";
-      console.error("GitHub OAuth error:", JSON.stringify(error, null, 2));
       form.setError("root", { message });
     }
   };
@@ -186,8 +182,7 @@ export default function SignIn() {
           GitHub
         </Button>
         <p className="mt-8 text-muted-foreground">
-          {/* eslint-disable-next-line react/no-unescaped-entities */}
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link
             href="/auth/sign-up"
             className="text-primary hover:underline hover:font-bold"

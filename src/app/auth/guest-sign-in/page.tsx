@@ -54,7 +54,6 @@ export default function GuestSignIn() {
     });
 
     if (error) {
-      console.error("Guest sign-in error:", JSON.stringify(error, null, 2));
       form.setError("root", { message: error.message });
     } else {
       toast.success("Signed in as Guest!");
@@ -73,7 +72,6 @@ export default function GuestSignIn() {
       });
 
       if (error) {
-        console.error("GitHub OAuth error:", JSON.stringify(error, null, 2));
         form.setError("root", { message: error.message });
       }
     } catch (error) {
@@ -81,7 +79,6 @@ export default function GuestSignIn() {
         error instanceof Error
           ? error.message
           : "An error occurred during GitHub sign-in";
-      console.error("GitHub OAuth error:", JSON.stringify(error, null, 2));
       form.setError("root", { message });
     }
   };
