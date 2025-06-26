@@ -17,14 +17,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faGithub } from "@fortawesome/free-brands-svg-icons";
+import { toast } from "sonner";
 
-// Define the form schema using Zod
 const formSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-// Infer the TypeScript type from the schema for form values
 type FormValues = z.infer<typeof formSchema>;
 
 export default function GuestSignIn() {
@@ -40,10 +39,8 @@ export default function GuestSignIn() {
 
   const onSubmit = async (values: FormValues) => {
     const { password } = values;
-    // Ensure email is a string, with a fallback
     const email = process.env.NEXT_PUBLIC_GUEST_EMAIL;
 
-    // Validate that email is defined
     if (!email) {
       form.setError("root", {
         message: "Guest email configuration is missing",
@@ -57,22 +54,35 @@ export default function GuestSignIn() {
     });
 
     if (error) {
+      console.error("Guest sign-in error:", JSON.stringify(error, null, 2));
       form.setError("root", { message: error.message });
     } else {
+      toast.success("Signed in as Guest!");
       router.push("/dashboard");
     }
   };
 
   const handleGitHubSignIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "github",
-      options: {
-        redirectTo: "http://localhost:3000/auth/callback",
-      },
-    });
+    try {
+      const redirectTo =
+        process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL ||
+        `${window.location.origin}/auth/callback`;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+        options: { redirectTo },
+      });
 
-    if (error) {
-      form.setError("root", { message: error.message });
+      if (error) {
+        console.error("GitHub OAuth error:", JSON.stringify(error, null, 2));
+        form.setError("root", { message: error.message });
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "An error occurred during GitHub sign-in";
+      console.error("GitHub OAuth error:", JSON.stringify(error, null, 2));
+      form.setError("root", { message });
     }
   };
 

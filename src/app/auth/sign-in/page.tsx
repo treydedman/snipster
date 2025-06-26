@@ -65,6 +65,7 @@ export default function SignIn() {
         });
 
       if (signInError) {
+        console.error("Sign-in error:", JSON.stringify(signInError, null, 2));
         form.setError("root", { message: signInError.message });
         return;
       }
@@ -86,18 +87,32 @@ export default function SignIn() {
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "An unexpected error occurred";
+      console.error("Sign-in error:", JSON.stringify(error, null, 2));
       form.setError("root", { message });
     }
   };
 
   const handleGitHubSignIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "github",
-      options: { redirectTo: "http://localhost:3000/auth/callback" },
-    });
+    try {
+      const redirectTo =
+        process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL ||
+        `${window.location.origin}/auth/callback`;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+        options: { redirectTo },
+      });
 
-    if (error) {
-      form.setError("root", { message: error.message });
+      if (error) {
+        console.error("GitHub OAuth error:", JSON.stringify(error, null, 2));
+        form.setError("root", { message: error.message });
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "An error occurred during GitHub sign-in";
+      console.error("GitHub OAuth error:", JSON.stringify(error, null, 2));
+      form.setError("root", { message });
     }
   };
 
